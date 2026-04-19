@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@source "../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php";
+@source "../js/**/*.vue"; 
+@source "../js/**/*.js";
+
+@import "flowbite/src/themes/default";
+@plugin "flowbite/plugin";
+@source "../../node_modules/flowbite";
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Disable dark mode */
+@variant dark (false);
+
+@layer components {
+  .table-text {
+    @apply px-6 py-4 whitespace-nowrap text-sm text-neutral-900;
+  }
+}

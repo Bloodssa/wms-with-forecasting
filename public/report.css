@@ -1,0 +1,71 @@
+body {
+    font-family: sans-serif;
+    color: #333;
+    font-size: 12px;
+}
+
+.header {
+    margin-bottom: 30px;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.header p {
+    margin: 5px 0;
+    color: #666;
+}
+
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+}
+
+.stats-box {
+    border: 1px solid #ddd;
+    padding: 15px;
+    text-align: center;
+}
+
+.stats-box .label {
+    display: block;
+    font-size: 10px;
+    color: #666;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+
+.stats-box .value {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+}
+
+table {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+th {
+    background: #E5E7EB;
+    text-align: left;
+    padding: 10px;
+}
+
+td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.text-right {
+    text-align: right;
+}
