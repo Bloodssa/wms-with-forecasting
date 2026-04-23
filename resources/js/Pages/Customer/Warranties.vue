@@ -8,16 +8,17 @@ import dayjs from 'dayjs';
 import Badge from '@/Components/Badge.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 
-defineProps({
+const props = defineProps({
     warranties: {
         type: Object,
         default: () => ({})
-    }
+    }, 
+    filters: Object
 });
 
 const open = ref(false);
-const search = ref('');
-const status = ref('');
+const search = ref(props.filters?.search || '');
+const status = ref(props.filters?.status || '');
 
 const statuses = [
     { label: 'All', value: '' },
@@ -134,7 +135,7 @@ const formatDate = (date) => {
                                 </div>
                             </div>
                         </td>
-                        <td class="hidden lg:table-cell px-4 py-3 align-middle">
+                        <td class="px-4 py-3 align-middle">
                             <div class="min-w-0 space-y-2">
                                 <p class="text-sm text-neutral-900 font-semibold truncate">
                                     {{ warranty.product.category.name }}

@@ -6,7 +6,6 @@ use App\Enum\InquiryStatusType;
 use App\Enum\UserRole;
 use App\Enum\WarrantyStatusType;
 use App\Http\Resources\PendingInquiryResource;
-use App\Http\Resources\ProductResource;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Http\Resources\WarrantyInquiries as ResourcesWarrantyInquiries;
 use App\Http\Resources\WarrantyResource;
@@ -115,14 +114,12 @@ class ManagerController extends Controller
             ->with('product:id,name,product_image_url', 'user:id,name')
             ->when($request->search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
-                    $q->whereHas('product', function ($q1) use ($search) {
-                        $q1->where('name', 'like', "%{$search}%");
-                    })
-                        ->orWhereHas('product', function ($q2) use ($search) {
-                            $q2->where('serial_number', 'like', "%{$search}%");
+                    $q->where('serial_number', 'like', "%{$search}%")
+                        ->orWhereHas('product', function ($q1) use ($search) {
+                            $q1->where('name', 'like', "%{$search}%");
                         })
-                        ->orWhereHas('user', function ($q3) use ($search) {
-                            $q3->where('name', 'like', "%{$search}%");
+                        ->orWhereHas('user', function ($q2) use ($search) {
+                            $q2->where('name', 'like', "%{$search}%");
                         });
                 });
             })
@@ -209,7 +206,7 @@ class ManagerController extends Controller
         return Inertia::render('Manager/StaffAccounts', [
             'users' => $users,
             'filters' => [
-                'search' => $request->search 
+                'search' => $request->search
             ]
         ]);
     }

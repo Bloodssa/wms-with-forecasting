@@ -42,7 +42,7 @@ const customerPages = [
                                 <NavLink :href="route('warranty')" :active="route().current('warranty') || route().current('warranty.show')">
                                     My Warranty
                                 </NavLink>
-                                <NavLink :href="route('inquiries')" :active="route().current('inquiries')">
+                                <NavLink :href="route('inquiries')" :active="route().current('inquiries') || route().current('inquiry.show')">
                                     Inquiries
                                 </NavLink>
                                 <NavLink :href="route('view-products')" :active="route().current('view-products')">

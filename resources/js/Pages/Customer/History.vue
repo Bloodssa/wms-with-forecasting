@@ -70,7 +70,7 @@ const formatDate = (date) => {
                                             {{ history.title }}
                                         </h3>
                                         <time class="text-xs text-gray-400">
-                                            {{ formatDate(history.created_at) }}
+                                            {{ formatDate(history.date) }}
                                         </time>
                                     </div>
                                     <div class="flex justify-between items-start gap-4">

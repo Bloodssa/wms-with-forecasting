@@ -40,7 +40,9 @@ Route::middleware('auth', 'customer')->group(function () {
     Route::get('/home', [CustomerController::class, 'index'])->name('home');
     Route::get('/warranty', [CustomerController::class, 'warrantyList'])->name('warranty');
     Route::get('/inquiries', [CustomerController::class, 'inquiries'])->name('inquiries');
-    Route::get('/view-products', [CustomerController::class, 'products'])->name('view-products');
+    Route::get('/inquiries/{id}', [CustomerController::class, 'showInquiry'])->name('inquiry.show');
+    Route::get('/shop-products', [CustomerController::class, 'products'])->name('view-products');
+    Route::get('/shop-products/{id}', [CustomerController::class, 'productsReview'])->name('review-products');
     Route::get('/history', [CustomerController::class, 'history'])->name('history');
     Route::get('/warranty/{id}', [CustomerController::class, 'show'])->name('warranty.show');
 

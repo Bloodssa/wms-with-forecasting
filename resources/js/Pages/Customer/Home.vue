@@ -26,19 +26,19 @@ const summaryStats = computed(() => [
         title: 'Active Warranties',
         count: props.stats.activeWarranties,
         icon: ShieldCheck,
-        href: ''
+        route: route('warranty', { status: 'active' })
     },
     {
         title: 'Expiring Warranties',
         count: props.stats.expWarCount,
         icon: AlarmClockMinus,
-        href: ''
+        route: route('warranty', { status: 'near-expiry' })
     },
     {
         title: 'Resolved Inquiry',
         count: props.stats.resolvedInquiryCount,
         icon: SquareCheckBig,
-        href: ''
+        route: route('inquiries', { status: 'resolved' })
     }
 ]);
 </script>
@@ -59,7 +59,7 @@ const summaryStats = computed(() => [
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card v-for="stat in summaryStats" :key="stat.title" :title="stat.title" :count="stat.count"
-                :icon="stat.icon" :href="stat.href" />
+                :icon="stat.icon" :route="stat.route" />
         </div>
         <div class="grid grid-cols-1 lg:grid-cols-2 mt-10 gap-6">
             <Summary title="Recently Purchased" :products="recentlyPurchased"

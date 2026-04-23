@@ -14,7 +14,7 @@ const props = defineProps({
 
 const typeClasses = {
     active: 'bg-emerald-50 border-emerald-200 text-emerald-900',
-    'near-expiry': 'bg-orange-50 border-orange-600 text-orange-900',
+    'near-expiry': 'bg-orange-50 border-orange-900 text-orange-900',
     expired: 'bg-rose-50 border-rose-200 text-rose-900',
     open: 'bg-blue-100 border-blue-200 text-blue-700',
     pending: 'bg-white border-gray-300 text-heading',
@@ -26,7 +26,7 @@ const typeClasses = {
 
 const dotClasses = {
     active: 'bg-emerald-700',
-    'near-expiry': 'bg-orange-600',
+    'near-expiry': 'bg-orange-900',
     expired: 'bg-rose-900',
     open: 'bg-blue-900',
     pending: 'bg-heading',

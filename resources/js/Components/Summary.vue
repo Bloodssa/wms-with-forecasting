@@ -78,7 +78,7 @@ const daysLeft = (date) => {
                         <!-- Expiring Mode -->
                         <template v-if="expiring">
                             <div class="text-right">
-                                <template v-if="product.status === 'near_expiry'">
+                                <template v-if="product.status === 'near-expiry'">
                                     <h1 class="text-neutral-900 text-xs">
                                         Expires in
                                     </h1>
@@ -93,12 +93,16 @@ const daysLeft = (date) => {
                                         Expired
                                     </h1>
                                 </template>
+                                <Link :href="route('warranty.show', { id: product.id })"
+                                    class="text-sm text-neutral-900 hover:underline font-medium">
+                                    Details
+                                </Link>
                             </div>
                         </template>
 
                         <!-- Normal Mode -->
                         <template v-else>
-                            <Link href=""
+                            <Link :href="route('warranty.show', { id: product.id })"
                                 class="text-sm text-neutral-900 hover:underline font-medium">
                                 Details
                             </Link>
