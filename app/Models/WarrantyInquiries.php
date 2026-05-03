@@ -14,12 +14,14 @@ class WarrantyInquiries extends Model
         'warranty_id',
         'message',
         'status',
-        'attachments'
+        'attachments',
+        'read_at'
     ];
 
     protected $casts = [
         'status' => InquiryStatusType::class,
         'attachments' => 'array',
+        'read_at' => 'datetime'
     ];
 
     public function user(): BelongsTo

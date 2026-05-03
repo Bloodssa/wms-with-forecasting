@@ -1,7 +1,7 @@
 <script setup>
 import ManagerLayout from '@/Layouts/ManagerLayout.vue';
 import { computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { ShieldCheck, Users, MessageSquare, MailWarning } from 'lucide-vue-next';
 import Card from '@/Components/Card.vue';
 import WarrantyChart from '@/Components/Charts/WarrantyChart.vue';
@@ -39,30 +39,35 @@ const summaryStats = computed(() => [
         title: 'Active Warranties',
         count: props.stats.activeWarranty,
         icon: ShieldCheck,
-        href: route('warranties')
+        route: route('warranties')
     },
     {
         title: 'Total Customers',
         count: props.stats.totalCustomer,
         icon: Users,
-        href: route('customers')
+        route: route('customers')
     },
     {
         title: 'Open Inquiries',
         count: props.stats.openInquiries,
         icon: MessageSquare,
-        href: route('warranty-inquiries')
+        route: route('warranty-inquiries', { status: 'open' })
     },
     {
         title: 'Unread Messages',
         count: props.stats.unreadMessages,
         icon: MailWarning,
-        href: route('warranty-inquiries')
+        route: route('warranty-inquiries')
     }
 ]);
+
+const goToInquiry = (id) => {
+    router.visit(route('inquiry-action', id));
+};
 </script>
 
 <template>
+
     <Head title="Dashboard" />
     <ManagerLayout>
         <section class="lg:mt-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -77,7 +82,7 @@ const summaryStats = computed(() => [
         <section class="mt-6 space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
                 <Card v-for="stat in summaryStats" :key="stat.title" :title="stat.title" :count="stat.count"
-                    :icon="stat.icon" :href="stat.href" />
+                    :icon="stat.icon" :route="stat.route" />
             </div>
         </section>
 
@@ -103,7 +108,8 @@ const summaryStats = computed(() => [
                     </h1>
                 </div>
                 <div class="divide-y divide-gray-300">
-                    <template v-if="mostReportedProducts.length > 0" v-for="reportedProducts in mostReportedProducts" :key="reportedProducts.id">
+                    <template v-if="mostReportedProducts.length > 0" v-for="reportedProducts in mostReportedProducts"
+                        :key="reportedProducts.id">
                         <div class="p-4 flex items-center justify-between">
                             <div class="flex items-center gap-3 w-full min-w-0">
                                 <div class="w-12 h-12 border border-gray-300 rounded-md overflow-hidden shrink-0">
@@ -130,7 +136,7 @@ const summaryStats = computed(() => [
                         </div>
                     </template>
                     <div v-else>
-                        <EmptyState message="There is no pending inquiries at the moment" />
+                        <EmptyState :border="false" message="There is no reported products at the moment" />
                     </div>
                 </div>
             </div>
@@ -147,7 +153,7 @@ const summaryStats = computed(() => [
                     <div class="overflow-x-auto">
                         <Table v-if="latestInquiries.length > 0" :data="latestInquiries"
                             :headers="['Customer', 'Product', 'Status']">
-                            <tr v-for="latest in latestInquiries" :key="latest.id">
+                            <tr class="hover:bg-gray-100 transition duration-200" @click="goToInquiry(latest.id)" v-for="latest in latestInquiries" :key="latest.id">
                                 <td class="table-text">
                                     <div class="flex items-center space-x-2">
                                         <Avatar :name="latest.user.name" class="h-8 w-8" />
@@ -176,7 +182,7 @@ const summaryStats = computed(() => [
                     <div class="overflow-x-auto">
                         <Table v-if="pendingInquiries.length > 0" :data="pendingInquiries"
                             :headers="['Customer', 'Product', 'Inquire Date']">
-                            <tr v-for="pending in pendingInquiries" :key="pending.id">
+                            <tr class="hover:bg-gray-100 transition duration-200" @click="goToInquiry(pending.id)" v-for="pending in pendingInquiries" :key="pending.id">
                                 <td class="table-text">
                                     <div class="flex items-center space-x-2">
                                         <Avatar :name="pending.name" class="h-8 w-8" />

@@ -36,6 +36,13 @@ const formatDate = (date) => {
 const daysLeft = (date) => {
     return dayjs(date).diff(dayjs(), 'day')
 }
+
+const isNearExpiry = (date) => {
+    const now = dayjs();
+    const expiry = dayjs(date);
+
+    return expiry.isAfter(now) && expiry.diff(now, 'day') <= 30;
+};
 </script>
 
 <template>
@@ -48,12 +55,7 @@ const daysLeft = (date) => {
         </div>
 
         <!-- Content -->
-        <div :class="[
-            'divide-y divide-gray-300',
-            isEmpty && products.length === 0
-                ? 'py-10 flex flex-col items-center justify-center'
-                : ''
-        ]">
+        <div class="divide-y divide-gray-300">
             <template v-if="products.length > 0">
                 <div v-for="product in products" :key="product.id" class="flex flex-row p-3">
                     <!-- Image -->
@@ -78,7 +80,7 @@ const daysLeft = (date) => {
                         <!-- Expiring Mode -->
                         <template v-if="expiring">
                             <div class="text-right">
-                                <template v-if="product.status === 'near-expiry'">
+                                <template v-if="isNearExpiry(product.expiry_date)">
                                     <h1 class="text-neutral-900 text-xs">
                                         Expires in
                                     </h1>
@@ -113,7 +115,7 @@ const daysLeft = (date) => {
 
             <!-- Empty State -->
             <template v-else>
-                <EmptyState :message="emptyTitle" />
+                <EmptyState height="min-h-60" :border="false" :message="emptyTitle" />
             </template>
         </div>
     </div>

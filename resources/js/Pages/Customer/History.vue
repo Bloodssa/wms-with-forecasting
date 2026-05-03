@@ -1,6 +1,7 @@
 <script setup>
+import EmptyState from '@/Components/EmptyState.vue'
 import CustomerLayout from '@/Layouts/CustomerLayout.vue'
-import { Head } from '@inertiajs/vue3'
+import { Head, Link } from '@inertiajs/vue3'
 import dayjs from 'dayjs'
 import { Check, ShieldX } from 'lucide-vue-next'
 
@@ -57,7 +58,7 @@ const formatDate = (date) => {
             <div class="mx-auto">
                 <div class="bg-white overflow-hidden border border-gray-300 sm:rounded-md">
                     <div class="divide-y divide-gray-300">
-                        <template v-for="history in histories" :key="history.id">
+                        <template v-if="histories.length" v-for="history in histories" :key="history.id">
                             <div class="group relative flex items-start gap-x-4 p-4">
                                 <div class="relative flex h-10 w-10 flex-none items-center justify-center rounded-full border"
                                     :class="getConfig(history.type).bgClass">
@@ -77,13 +78,16 @@ const formatDate = (date) => {
                                         <p class="mt-1 text-sm text-gray-500">
                                             {{ history.description }}
                                         </p>
-                                        <a :href="history.url"
+                                        <Link :href="history.url"
                                             class="text-xs font-semibold text-neutral-900 hover:underline whitespace-nowrap">
                                             View More
-                                        </a>
+                                        </Link>
                                     </div>
                                 </div>
                             </div>
+                        </template>
+                        <template v-else>
+                            <EmptyState :border="false" message="No available purchase, inquiry history at the moment" />
                         </template>
                     </div>
                 </div>

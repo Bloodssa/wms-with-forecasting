@@ -8,7 +8,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use App\Models\Warranty;
+use Illuminate\Support\Collection;
 
 class WarrantyInvitation extends Mailable implements ShouldQueue
 {
@@ -17,9 +17,9 @@ class WarrantyInvitation extends Mailable implements ShouldQueue
     /**
      * Create a new message instance.
      */
-    public function __construct(public Warranty $warranty, public $email, public $registrationUrl)
+    public function __construct(public Collection $warranties, public string $email, public string $registrationUrl)
     {
-        //
+        $this->afterCommit();
     }
 
     /**

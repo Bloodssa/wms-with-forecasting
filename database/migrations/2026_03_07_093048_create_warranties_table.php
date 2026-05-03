@@ -17,8 +17,10 @@ return new class extends Migration
             $table->id();
             $table->foreignIdFor(User::class)->nullable()->constrained()->cascadeOnDelete();
             $table->foreignIdFor(Product::class)->constrained()->cascadeOnDelete();
+            $table->string('claim_email');
             $table->string('serial_number')->unique();
             $table->date('purchase_date');
+            $table->decimal('purchase_price', 12, 2)->nullable();
             $table->date('expiry_date');
             $table->enum('status', ['active', 'pending', 'near-expiry', 'expired'])->index();    
             $table->boolean('is_claimed')->default(false);

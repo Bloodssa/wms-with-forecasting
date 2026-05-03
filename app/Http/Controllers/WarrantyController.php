@@ -19,6 +19,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
 
@@ -27,6 +29,18 @@ class WarrantyController extends Controller
     public function inquire(InquiryWarrantyRequest $request)
     {
         $data = $request->validated();
+
+        // guard if warranty expired then dont allow for inquiries
+        $warranty = Warranty::findOrFail($data['warranty_id']);
+
+        // if the user tries to inquire in other warranty or not his own warranty
+        if ($warranty->user_id !== Auth::user()->id) {
+            return back()->with('error', 'You are not allowed to access this warranty.');
+        }
+
+        if (now()->greaterThan($warranty->expiry_date)) {
+            return back()->with('error', 'This warranty has already expired and cannot accept new inquiries.');
+        }
 
         // handle the image path and it will be stored as a json
         $attachmentPaths = [];
@@ -43,10 +57,48 @@ class WarrantyController extends Controller
             'message' => $data['message'],
             'user_id' => Auth::id(),
             'status' => InquiryStatusType::OPEN,
-            'attachments' => $attachmentPaths
+            'attachments' => $attachmentPaths,
+            'read_at' => null
         ]);
 
-        return back()->with('success', 'Inquiry Submitted');
+        return redirect()->route('inquiry.show', $inquiries->id)->with('success', 'Inquiry Submitted');
+    }
+
+    public function storeInquiry(string $id)
+    {
+        $warranty = Warranty::with('product.category')
+            ->where('id', $id)
+            ->where('user_id', Auth::user()->id)
+            ->first();
+
+        // user does not have warranty
+        if (! $warranty) {
+            return back()->with('error', 'Unauthorized access to warranty.');
+        }
+
+        // warranty expired
+        if (now()->greaterThan($warranty->expiry_date)) {
+            return redirect()->route('inquiries')->with('error', 'This warranty has expired and cannot accept inquiries.');
+        }
+
+        // dont allow customer to send multiple inquiries
+        // get the final statuses
+        $finalStatuses = collect(InquiryStatusType::cases())
+            ->filter(fn($status) => $status->isFinal())
+            ->map(fn($status) => $status->value)
+            ->toArray();
+
+        $hasActiveInquiry = $warranty->inquiries()
+            ->whereNotIn('status', $finalStatuses)
+            ->exists();
+
+        if ($hasActiveInquiry) {
+            return redirect()->route('inquiries')->with('error', 'You already have an active inquiry for this product.');
+        }
+
+        return Inertia::render('Customer/Create', [
+            'warranty' => $warranty
+        ]);
     }
 
     /**
@@ -54,26 +106,28 @@ class WarrantyController extends Controller
      * 
      * Display the specified resource.
      */
-    public function show(string $serial)
+    public function show(string $email)
     {
         // get the serial number of the product from the query string
-        $warrantyClaim = Warranty::where('serial_number', $serial)->where('is_claimed', false)->firstORFail();
+        // incase customer miss the expiry date
+        $warranties = Warranty::with('product')
+            ->where('claim_email', $email)
+            ->where('is_claimed', false)
+            ->get();
 
-        // throw 403 that warranty is already claim
-        if ($warrantyClaim->is_claimed) {
-            abort(403, 'Warranty already claimed.');
-        }
-
-        // guard for the warranty expiration
-        if (now()->greaterThan($warrantyClaim->expiry_date)) {
-            abort(403, 'Warranty already expired.');
+        if ($warranties->isEmpty()) {
+            abort(404, 'No claimable warranties found.');
         }
 
         // add session for claiming the warranty
-        session(['claim_warranty' => $warrantyClaim->id]);
+        session([
+            'claim_email' => $email,
+            'claim_warranty_id' => $warranties->pluck('id')->toArray() // get all id to display in the registration products
+        ]);
 
         return Inertia::render('Auth/Register', [
-            'warranty' => $warrantyClaim,
+            'email' => $email,
+            'warranties' => $warranties,
         ]);
     }
 
@@ -82,44 +136,57 @@ class WarrantyController extends Controller
      */
     public function store(StoreWarrantyRequest $request)
     {
+        // dd($request);
         $data = $request->validated();
 
-        $user = User::where('email', $data['email'])->first('id');
+        $createdWarranties = [];
+        $user = null;
 
-        // get the product for the warranty duration
-        $product = Product::findOrFail($data['product_id']);
+        // create multiple warranties
+        DB::transaction(function () use ($data) {
+            $user = User::where('email', $data['claim_email'])->first(); // find customer if it exists
 
-        // PARSE THE DATE
-        $purchaseDate = Carbon::parse($request->purchase_date);
-        $expiryDate = $purchaseDate->copy()->addMonths($product->warranty_duration);
+            $createdWarranties = []; // init created warrabties to pass in the mail
 
-        $warrantyPayload = [
-            'product_id' => $product->id,
-            'serial_number' => $data['serial_number'],
-            'purchase_date' => $purchaseDate,
-            'expiry_date' => $expiryDate,
-            'user_id' => $user?->id,
-            'status' => $user ? WarrantyStatusType::ACTIVE : WarrantyStatusType::PENDING,
-            'is_claimed' => (bool)$user
-        ];
+            foreach ($data['multiple_products'] as $item) {
+                $product = Product::findOrFail($item['product_id']);
 
-        if ($user) {
-            $warrantyPayload['user_id'] = $user['id'];
-        }
+                $purchaseDate = Carbon::parse($data['purchase_date']);
+                $expiryDate = $purchaseDate->copy()->addMonths($product->warranty_duration);
 
-        $warranty = Warranty::create($warrantyPayload);
+                $warranty = Warranty::create([
+                    'user_id' => $user?->id,
+                    'product_id' => $product->id,
+                    'claim_email' => $data['claim_email'],
+                    'serial_number' => $item['serial_number'],
+                    'purchase_date' => $purchaseDate,
+                    'purchase_price' => $item['price'],
+                    'expiry_date' => $expiryDate,
+                    'status' => $user ? WarrantyStatusType::ACTIVE : WarrantyStatusType::PENDING,
+                    'is_claimed' => (bool)$user
+                ]);
 
+                $createdWarranties[] = $warranty->id; // store warranty id to query and send with products details in one mail
+            }
+        });
+
+        // log email
+        Log::info('User Warranty Send mail: ' . $data['claim_email']); // incase mail expired
+        // send email if user not registered
         if (! $user) {
-            // assigned a registration url for claim and email to the customer
-            $registrationLink = URL::temporarySignedRoute('customer.claim', $warranty->expiry_date, ['serial' => $warranty->serial_number]);
+            $wararanties = Warranty::with('product')
+                ->whereIn('id', $createdWarranties) // send id to get all the warranties stored
+                ->get();
 
-            $warranty->load('product');
+            $registrationLink = URL::temporarySignedRoute('customer.claim', now()->addDays(60), ['email' => $data['claim_email']]);
 
-            // send an invitation mail to customer account registration with the created url with hash for security purposes
-            Mail::to($request->email)->send(new WarrantyInvitation($warranty, $request->email, $registrationLink));
+            Mail::to($data['claim_email'])->send(new WarrantyInvitation(
+                $wararanties,
+                $data['claim_email'],
+                $registrationLink
+            ));
         }
-
-        return redirect('register-warranty')->with('status', 'Warranty created and email sent!');
+        return redirect('register-warranty')->with('success', 'Warranty created and email sent!');
     }
 
     /**
@@ -148,12 +215,36 @@ class WarrantyController extends Controller
 
         $inquiries = InquiryResponse::create($data);
 
+        // mark as unread
+        $inquiries->warrantyInquiries->update([
+            'read_at' => null
+        ]);
+
         // when the tech or customer reply to the inquiry update the updated_at in the WarrantyInquiry
-        $inquiries->warrantyInquiries->touch();
+        // $inquiries->warrantyInquiries->touch();
 
         broadcast(new InquiryResponseSent($inquiries))->toOthers();
 
         return back()->with('success', 'Inquiry Response Submitted');
+    }
+
+    // mark as read messages
+    public function markRead(string $id)
+    {
+        // update all the inquiries read at
+        InquiryResponse::where('warranty_inquiries_id', $id)
+            ->whereNull('read_at')
+            ->where('user_id', '!=', Auth::user()->id)
+            ->update([
+                'read_at' => now()
+            ]);
+
+        WarrantyInquiries::where('id', $id)
+            ->update([
+                'read_at' => now()
+            ]);
+
+        return back();
     }
 
     /**
@@ -166,6 +257,11 @@ class WarrantyController extends Controller
         // dd($request);
         $inquiry = WarrantyInquiries::findOrFail($id);
         $previousStatus = $inquiry->status;
+        $newStatus = InquiryStatusType::from($data['status']);
+
+        if (!$previousStatus->canTransitionTo($newStatus)) {
+            return back()->with('error', "Invalid transition: You cannot move the status from " . $previousStatus->label() . " to " . $newStatus->label() . ".");
+        }
 
         $inquiry->update([
             'status' => $data['status']
@@ -184,5 +280,78 @@ class WarrantyController extends Controller
         broadcast(new InquiryResponseSent($response))->toOthers();
 
         return back()->with('success', 'Inquiry status updated successfully!');
+    }
+
+    /**
+     * Customer cancel the inquiry
+     */
+    public function cancelInquiry(Request $request, string $id)
+    {
+        $request->validate([
+            'message' => ['required', 'string']
+        ]);
+
+        $inquiry = WarrantyInquiries::where('id', $id)
+            ->where('user_id', Auth::id())
+            ->first();
+
+        if (! $inquiry) {
+            return back()->with('error', 'Inquiry not found.');
+        }
+
+        $currentStatus = $inquiry->status;
+
+        if ($currentStatus->isFinal()) {
+            return back()->with('error', 'This inquiry can no longer be cancelled.');
+        }
+
+        $inquiry->update([
+            'status' => InquiryStatusType::CLOSED
+        ]);
+
+        $inquiry->responses()->create([
+            'user_id' => Auth::id(),
+            'message' => "User cancelled inquiry: {$request->message}", // merge customer message
+            'type' => InquiryResponseType::SOLUTION
+        ]);
+
+        return back()->with('success', 'Inquiry has been cancelled.');
+    }
+
+    /**
+     * Session based notification read
+     */
+    public function markReadNotifications()
+    {
+        session([
+            'notifications_read_at' => now()
+        ]);
+
+        return back();
+    }
+
+    public function claimWithSerialNumber(Request $request)
+    {
+        $request->validate([
+            'serial_number' => ['required', 'string'],
+            'purchase_email' => ['required', 'string']
+        ]);
+
+        $warranty = Warranty::where('serial_number', $request->serial_number)
+            ->where('claim_email', $request->purchase_email)
+            ->whereNull('user_id')
+            ->first();
+
+        if (!$warranty) {
+            return back()->with('error', 'We could not find a pending warranty with this serial number and email combination.');
+        }
+
+        $warranty->update([
+            'user_id' => Auth::id(),
+            'status' => WarrantyStatusType::ACTIVE,
+            'is_claimed' => true,
+        ]);
+
+        return back()->with('success', 'Warranty successfully claimed Product Name: ' . $warranty->product->name);
     }
 }

@@ -6,15 +6,19 @@ use App\Enum\InquiryStatusType;
 use App\Enum\UserRole;
 use App\Enum\WarrantyStatusType;
 use App\Http\Resources\PendingInquiryResource;
+use App\Http\Resources\Warranty\WarrantyInfoResource;
 use Barryvdh\DomPDF\Facade\Pdf;
-use App\Http\Resources\WarrantyInquiries as ResourcesWarrantyInquiries;
-use App\Http\Resources\WarrantyResource;
+use App\Http\Resources\Warranty\WarrantyInquiries as ResourcesWarrantyInquiries;
+use App\Http\Resources\Warranty\WarrantyResource;
+use App\Models\Category;
+use App\Models\InquiryResponse;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Warranty;
 use App\Models\WarrantyInquiries;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -34,11 +38,13 @@ class ManagerController extends Controller
                 'activeWarranty' => Warranty::isActive()->count(),
                 'totalCustomer' => User::where('role', UserRole::CUSTOMER)->count(),
                 'openInquiries' => WarrantyInquiries::where('status', InquiryStatusType::OPEN)->count(),
-                'unreadMessages' => 0
+                'unreadMessages' => InquiryResponse::whereNull('read_at')->count()
             ],
             'chart' => $this->getWarrantyChartData(),
             'mostReportedProducts' => $this->mostReportedProduct(),
-            'latestInquiries' => WarrantyInquiries::with('user', 'warranty.product')->latest()->take(5)->get(),
+            'latestInquiries' => WarrantyInquiries::query()
+                ->select(['id', 'user_id', 'warranty_id', 'status'])
+                ->with(['user:id,name', 'warranty:id,product_id', 'warranty.product:id,name'])->latest()->take(5)->get(),
             'pendingInquiries' => PendingInquiryResource::collection(WarrantyInquiries::with(['user:id,name,email', 'warranty.product:id,name'])->orderBy('created_at', 'desc')->take(5)->get())
         ]);
     }
@@ -49,7 +55,11 @@ class ManagerController extends Controller
     public function register(): Response
     {
         return Inertia::render('Manager/Register', [
-            'products' => Product::all(['id', 'name'])
+            'products' => Product::query()
+                ->select(['id', 'category_id', 'price', 'name', 'brand', 'product_image_url'])
+                ->with('category:id,name')
+                ->get(),
+            'categories' => Category::pluck('name')
         ]);
     }
 
@@ -61,6 +71,12 @@ class ManagerController extends Controller
         $warrantyInquiries = WarrantyInquiries::query()
             ->select(['id', 'user_id', 'warranty_id', 'message', 'status', 'created_at'])
             ->with('user:id,name,email', 'warranty:id,product_id,serial_number', 'warranty.product:id,name')
+            ->withCount([
+                'responses as unread_messages_count' => function ($q) {
+                    $q->whereNull('read_at')
+                        ->where('user_id', '!=', Auth::id());
+                }
+            ])
             ->when($request->search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->whereHas('warranty', function ($q2) use ($search) {
@@ -73,6 +89,7 @@ class ManagerController extends Controller
                     });
                 });
             })
+            ->orderByDesc('unread_messages_count')
             ->when($request->status, function ($query, $status) {
                 $query->where('status', $status);
             })
@@ -91,12 +108,16 @@ class ManagerController extends Controller
      */
     public function inquiryResponse(int $id): Response
     {
-        $inquiry = WarrantyInquiries::with('warranty.product.category', 'user', 'responses.user')
+        $inquiry = WarrantyInquiries::with(['warranty.product.category', 'user', 'responses.user'])
             ->findOrFail($id);
 
         // collect and combine inquiry and messages
         $messages = $this->inquiryMessages(collect([$inquiry]));
         // dd($messages);
+
+        $status = $inquiry->status instanceof InquiryStatusType ? $inquiry->status : InquiryStatusType::from($inquiry->status);
+
+        $inquiry->is_done = $status->isFinal(); // attch the bool if its done
 
         return Inertia::render('Manager/InquiryResponse', [
             'inquiry' => $inquiry,
@@ -110,8 +131,8 @@ class ManagerController extends Controller
     public function warranties(Request $request): Response
     {
         $warranties = Warranty::query()
-            ->select(['id', 'product_id', 'user_id', 'serial_number', 'status', 'purchase_date', 'expiry_date'])
-            ->with('product:id,name,product_image_url', 'user:id,name')
+            ->select(['id', 'product_id', 'user_id', 'serial_number', 'is_claimed', 'claim_email', 'status', 'purchase_date', 'expiry_date'])
+            ->with(['product:id,name,product_image_url', 'user:id,name'])
             ->when($request->search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('serial_number', 'like', "%{$search}%")
@@ -134,6 +155,20 @@ class ManagerController extends Controller
         return Inertia::render('Manager/Warranties', [
             'warranties' => $warranties,
             'select' => WarrantyStatusType::options()
+        ]);
+    }
+
+    public function showWarranty(string $id)
+    {
+        $warranty = Warranty::with(['user', 'product.category'])
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $history = WarrantyInquiries::with('user')->where('warranty_id', $warranty->id)->get();
+
+        return Inertia::render('Manager/ShowWarranty', [
+            'warranty' => $warranty,
+            'history' => $history
         ]);
     }
 
@@ -201,7 +236,7 @@ class ManagerController extends Controller
                 });
             })
             ->latest()
-            ->paginate(10);
+            ->get();
 
         return Inertia::render('Manager/StaffAccounts', [
             'users' => $users,
@@ -237,6 +272,47 @@ class ManagerController extends Controller
         ]);
 
         return redirect()->back()->with('success', ucfirst($user->role->value) . ' created successfully');
+    }
+
+    public function updateRole(Request $request, User $user)
+    {
+        if (Auth::user()->role !== UserRole::ADMIN) {
+            return back()->with('error', 'Unauthorized action. Only admins can update roles.');
+        }
+
+        if ($user->id === Auth::id()) {
+            return back()->with('error', 'You cannot change your own administrative role.');
+        }
+
+        $request->validate([
+            'role' => ['required', Rule::enum(UserRole::class), Rule::in([UserRole::STAFF, UserRole::TECHNICIAN])]
+        ]);
+
+        $user->update(['role' => $request->role]);
+
+        return back()->with('success', 'Staff role updated successfully.');
+    }
+
+    public function destroyStaff(User $user)
+    {
+        // only admin
+        if (Auth::user()->role !== UserRole::ADMIN) {
+            return back()->with('error', 'Unauthorized action. Only admins can remove team members.');
+        }
+
+        // prevent deleting itself
+        if ($user->id === Auth::user()->id) {
+            return back()->with('error', 'You cannot delete your own account.');
+        }
+
+        // prevent deleting the admin
+        if ($user->role === UserRole::ADMIN) {
+            return back()->with('error', 'Administrative accounts cannot be deleted here.');
+        }
+
+        $user->delete();
+
+        return back()->with('success', 'Staff account removed.');
     }
 
 
@@ -405,7 +481,7 @@ class ManagerController extends Controller
             'stats' => [
                 'activeWarranty' => Warranty::isActive()->count(),
                 'warrantyClaimCount' => WarrantyInquiries::where('created_at', '>=', $interval)->count(),
-                'resolvedInquiry' => WarrantyInquiries::whereIn('status', ['resolved', 'replaced'])->where('created_at', '>=', $interval)->count(),
+                'resolvedInquiry' => WarrantyInquiries::whereIn('status', [InquiryStatusType::RESOLVED, InquiryStatusType::REPLACED])->where('created_at', '>=', $interval)->count(),
             ],
             'chartsData' => $datas,
             'nearExpiryWarranties' => Warranty::with('user', 'product')->where('status', 'near-expiry')->orderBy('created_at', 'desc')->get(),

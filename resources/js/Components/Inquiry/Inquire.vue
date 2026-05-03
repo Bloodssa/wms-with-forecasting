@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { router, useForm } from '@inertiajs/vue3';
+import { router, useForm, Link } from '@inertiajs/vue3';
 import { CircleX } from 'lucide-vue-next';
 import InputLabel from '../Forms/InputLabel.vue';
 import InputError from '../Forms/InputError.vue';
@@ -50,7 +50,7 @@ const syncFiles = () => {
     if (fileInput.value) {
         fileInput.value.files = dt.files;
     }
-}
+};
 
 const form = useForm({
     warranty_id: props.warranty.id,
@@ -85,10 +85,10 @@ const submit = () => {
                             Describe the issue of your purchased product
                         </InputLabel>
                         <textarea id="messages" v-model="form.message" rows="6"
-                            class="block w-full rounded-md border-gray-300 focus:ring-1 focus:ring-neutral-900 focus:border-neutral-900 sm:text-sm placeholder-gray-400"
+                            class="input-border w-full rounded-md border-gray-300 focus:border-neutral-900"
                             placeholder="Please detail the problem you are experiencing..."></textarea>
                         <InputError :message="form.errors.message" class="mt-2" />
-                    </div>
+                    </div>  
                     <!-- ATTACHMENTS -->
                     <div>
                         <label class="block text-md font-semibold text-neutral-900 mb-2">
@@ -120,10 +120,20 @@ const submit = () => {
                                 </button>
                             </div>
                         </div>
+                        <div v-if="Object.keys(form.errors).some(key => key.startsWith('attachments'))" class="mt-2">
+                            <ul class="text-sm text-red-600 list-disc list-inside">
+                                <li v-for="(error, key) in form.errors" :key="key">
+                                    <span v-if="key.startsWith('attachments')">{{ error }}</span>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="px-6 py-4 flex items-center justify-end gap-3">
+                <Link :href="route('inquiries')" class="text-black px-6 py-2.5 border border-gray-300 rounded-md hover:bg-gray-50">
+                    Cancel
+                </Link>
                 <button type="submit"
                     class="inline-flex items-center px-6 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-md hover:bg-black transition-all">
                     Submit Inquiry

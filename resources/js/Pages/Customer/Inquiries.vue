@@ -1,13 +1,15 @@
 <script setup>
 import CustomerLayout from '@/Layouts/CustomerLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import { Search } from 'lucide-vue-next';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import EmptyState from '@/Components/EmptyState.vue';
 import Badge from '@/Components/Badge.vue';
 import TextInput from '@/Components/Forms/TextInput.vue';
+import Pagination from '@/Components/Pagination.vue';
+import BaseModal from '@/Components/Modals/BaseModal.vue';
 
 dayjs.extend(relativeTime);
 
@@ -20,10 +22,14 @@ const props = defineProps({
     select: {
         type: [Object, Array],
         default: () => []
+    },
+    warranties: {
+        type: Object,
+        default: () => ({})
     }
 });
 
-const open = ref(false);
+const showEditModal = ref(false);
 const search = ref(props.filters?.search || '');
 const selectedStatus = ref(props.filters?.status || '');
 
@@ -57,6 +63,34 @@ watch([search, selectedStatus], ([newSearch, newStatus]) => {
         replace: true
     });
 });
+
+const filteredWarranties = computed(() => {
+    return props.warranties.filter(w => {
+        return w.product.name.toLowerCase().includes(search.value.toLowerCase());
+    });
+});
+
+const isExpired = (warranty) => {
+    return dayjs().isAfter(dayjs(warranty.expiry_date));
+};
+
+const selectWarranty = (warranty) => {
+    if (isExpired(warranty)) return;
+
+    router.get(route('create-inquiry', warranty.id), {}, {
+        preserveState: false
+    });
+};
+
+// mark as read the inquiry messages
+const openInquiry = (inquiry) => {
+    router.post(route('inquiry.mark-read', inquiry.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            router.visit(route('inquiry.show', inquiry.id));
+        }
+    });
+};
 </script>
 
 <template>
@@ -82,7 +116,8 @@ watch([search, selectedStatus], ([newSearch, newStatus]) => {
                 </div>
 
                 <div class="relative">
-                    <select v-model="selectedStatus" class="h-10 pl-4 pr-10 bg-white border border-gray-300 rounded-md text-sm font-medium w-full md:w-48 focus:ring-1 focus:ring-neutral-900 focus:border-neutral-900 appearance-none cursor-pointer">
+                    <select v-model="selectedStatus"
+                        class="h-10 pl-4 pr-10 bg-white border border-gray-300 rounded-md text-sm font-medium w-full md:w-48 focus:ring-1 focus:ring-neutral-900 focus:border-neutral-900 appearance-none cursor-pointer">
                         <option value="">All Statuses</option>
                         <option v-for="(label, value) in props.select" :key="value" :value="value">
                             {{ label }}
@@ -90,25 +125,28 @@ watch([search, selectedStatus], ([newSearch, newStatus]) => {
                     </select>
                 </div>
 
-                <Link href=""
+                <button @click="showEditModal = true"
                     class="h-10 px-4 bg-neutral-900 text-white rounded-md text-sm font-medium inline-flex items-center justify-center">
                     New Inquiry
-                </Link>
+                </button>
             </div>
         </div>
 
         <!-- Inquiry List -->
         <template v-if="inquiries.data.length">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Link :href="route('inquiry.show', { id: inquiry.id })" v-for="inquiry in inquiries.data"
-                    :key="inquiry.id" href=""
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <Link @click.prevent="openInquiry(inquiry)" :href="route('inquiry.show', { id: inquiry.id })" v-for="inquiry in inquiries.data"
+                    :key="inquiry.id"
                     class="group relative bg-white border border-gray-300 hover:border-2 hover:border-neutral-900 rounded-md cursor-pointer transition">
                     <!-- Top -->
                     <div class="flex justify-between pt-5 px-5">
                         <h3 class="text-lg font-bold text-neutral-900 mb-1">
                             {{ inquiry.warranty.product.name }}
                         </h3>
-
+                        <div v-if="inquiry.unread_count > 0"
+                            class="absolute top-0 right-1 bg-red-500 text-white text-2xs px-2 py-0.5 rounded-full">
+                            {{ inquiry.unread_count > 9 ? '9+' : inquiry.unread_count }}
+                        </div>
                         <span class="px-2 py-1 text-xs">
                             <Badge :type="inquiry.status">
                                 {{ inquiry.status }}
@@ -152,12 +190,56 @@ watch([search, selectedStatus], ([newSearch, newStatus]) => {
                     </div>
                 </Link>
             </div>
+            <div v-if="inquiries.links.length > 3" class="mt-6">
+                <Pagination :links="inquiries.links" />
+            </div>
         </template>
         <template v-else>
-            <div class="bg-white border border-gray-300 rounded-md">
+            <div class="bg-white border border-gray-300 rounded-md overflow-hidden">
                 <EmptyState :border="false"
                     :message="inquiries.data.length ? 'No inquiries found' : 'No inquiries at the moment'" />
             </div>
         </template>
     </CustomerLayout>
+
+    <BaseModal :show="showEditModal" @close="showEditModal = false" title="Select A Product"
+        subtitle="Choose the product that you want to submit an inquiry" size="md" height="auto">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 overflow-y-auto pr-2">
+            <template v-if="filteredWarranties.length">
+                <button type="button" v-for="warranty in filteredWarranties" :key="warranty.id"
+                    @click="selectWarranty(warranty)"
+                    class="group flex items-center gap-3 p-2.5 rounded-md hover:bg-gray-50 border border-gray-300 bg-white text-left w-full"
+                    :class="{
+                        'opacity-50 cursor-not-allowed': isExpired(warranty)
+                    }">
+                    <!-- Product Image -->
+                    <div class="shrink-0 h-12 w-12 overflow-hidden rounded-md border border-gray-300">
+                        <img :src="`/storage/${warranty.product.product_image_url}`"
+                            class="w-full h-full object-cover" />
+                    </div>
+
+                    <!-- Info -->
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[13px] font-semibold text-neutral-900 truncate">
+                            {{ warranty.product.name }}
+                        </p>
+
+                        <p class="text-[11px] text-neutral-500">
+                            {{ warranty.serial_number }}
+                        </p>
+                        <Badge :type="warranty.status">
+                            {{ warranty.status }}
+                        </Badge>
+                    </div>
+                </button>
+            </template>
+
+            <!-- Empty State -->
+            <template v-else>
+                <div class="col-span-full flex justify-center">
+                    <EmptyState :border="false" class="min-h-0! py-4" message="No warranties available." />
+                </div>
+            </template>
+        </div>
+    </BaseModal>
 </template>

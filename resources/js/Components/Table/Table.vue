@@ -1,5 +1,5 @@
 <script setup>
-import Pagination from '@/Components/Table/Pagination.vue'
+import Pagination from '@/Components/Pagination.vue';
 
 defineProps({
     headers: {
@@ -42,8 +42,8 @@ defineProps({
                 </tbody>
             </table>
             <!-- Paginate -->
-            <div v-if="datas">
-                <Pagination :links="datas.links" :meta="datas.meta" />
+            <div v-if="datas?.links?.length > 3" class="px-3 py-4 w-full border-t border-gray-300">
+                <Pagination :links="datas.links" />
             </div>
         </div>
     </div>

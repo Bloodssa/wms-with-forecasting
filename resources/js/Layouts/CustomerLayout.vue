@@ -1,5 +1,7 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted, nextTick } from 'vue';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import { Link, usePage } from '@inertiajs/vue3';
 import MarkLogo from '@/Components/Icons/MarkLogo.vue';
 import Dropdown from '@/Components/Nav/Dropdown.vue';
@@ -8,19 +10,90 @@ import NavLink from '@/Components/Nav/NavLink.vue';
 import ResponsiveNavLink from '@/Components/Nav/ResponsiveNavLink.vue';
 import Avatar from '@/Components/Icons/Avatar.vue';
 import { UserPen, LogOut } from 'lucide-vue-next';
+import Notification from '@/Components/Nav/Notification.vue';
+import { useToast } from "primevue/usetoast";
+import Toast from 'primevue/toast';
+
+dayjs.extend(relativeTime);
 
 const showingNavigationDropdown = ref(false);
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 
-const customerPages = [
-    'Customer/Show',
-    'Customer/Warranty'
-];
+const isNotificationOpen = ref(false);
+
+const toggleUserDropdown = (event) => {
+    if (event) event.stopPropagation();
+
+    showingNavigationDropdown.value = !showingNavigationDropdown.value;
+    isNotificationOpen.value = false; // Close notifications when profile opens
+};
+
+const toggleNotification = (event) => {
+    // stop propagination
+    if (event) event.stopPropagation();
+
+    isNotificationOpen.value = !isNotificationOpen.value;
+    showingNavigationDropdown.value = false;
+};
+
+const closeNotification = () => {
+    isNotificationOpen.value = false;
+};
+
+const toast = useToast();
+
+const triggerToast = (flash) => {
+    if (flash?.success) {
+        toast.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: flash.success,
+            life: 3000
+        });
+    }
+
+    if (flash?.error) {
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: flash.error,
+            life: 5000
+        });
+    }
+
+    if (flash?.warning) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Warning',
+            detail: flash.warning,
+            life: 4000
+        });
+    }
+};
+
+// 2. Handle redirects (Page Initial Load)
+onMounted(async () => {
+    await nextTick(); // Wait for PrimeVue Toast component to fully load in the DOM
+    triggerToast(page.props.flash);
+});
+
+// 3. Handle page updates without navigation (e.g., return back())
+watch(
+    () => page.props.flash,
+    async (newFlash) => {
+        await nextTick();
+        triggerToast(newFlash);
+    },
+    { deep: true } // Remove `immediate: true` as onMounted now handles the first check
+);
 </script>
 
 <template>
     <div>
+        <Toast :pt="{ 
+            root: { class: 'z-[10001]' } 
+        }" />
         <div class="min-h-screen bg-gray-100">
             <nav class="border-b border-gray-300 bg-white relative">
                 <!-- Primary Navigation Menu -->
@@ -39,13 +112,16 @@ const customerPages = [
                                 <NavLink :href="route('home')" :active="route().current('home')">
                                     Home
                                 </NavLink>
-                                <NavLink :href="route('warranty')" :active="route().current('warranty') || route().current('warranty.show')">
+                                <NavLink :href="route('warranty')"
+                                    :active="route().current('warranty') || route().current('warranty.show')">
                                     My Warranty
                                 </NavLink>
-                                <NavLink :href="route('inquiries')" :active="route().current('inquiries') || route().current('inquiry.show')">
+                                <NavLink :href="route('inquiries')"
+                                    :active="route().current('inquiries') || route().current('inquiry.show') || route().current('create-inquiry')">
                                     Inquiries
                                 </NavLink>
-                                <NavLink :href="route('view-products')" :active="route().current('view-products')">
+                                <NavLink :href="route('view-products')"
+                                    :active="route().current('view-products') || route().current('products-details') || route().current('product-reviews')">
                                     Products
                                 </NavLink>
                                 <NavLink :href="route('history')" :active="route().current('history')">
@@ -57,14 +133,13 @@ const customerPages = [
                         <div class="hidden sm:ms-6 sm:flex sm:items-center">
                             <!-- Settings Dropdown -->
                             <div class="relative flex justify-center items-center ms-3">
-                                <button
-                                    class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-gray-300 hover:bg-gray-100 transition-colors duration-150">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="text-neutral-900" width="23"
-                                        height="23" fill="currentColor" viewBox="0 0 16 16">
-                                        <path
-                                            d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2M8 1.918l-.797.161A4 4 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4 4 0 0 0-3.203-3.92zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5 5 0 0 1 13 6c0 .88.32 4.2 1.22 6" />
-                                    </svg>
-                                </button>
+                                <div @click.stop>
+                                    <Notification :is-open="isNotificationOpen" :notifications="$page.props.notifications" @toggle="toggleNotification"
+                                        @close="closeNotification">
+                                        
+                                    </Notification>
+                                </div>
+
                                 <Dropdown align="right" width="48">
                                     <template #trigger>
                                         <span class="inline-flex rounded-md">
@@ -89,19 +164,26 @@ const customerPages = [
 
                         <!-- Hamburger -->
                         <div class="-me-2 flex items-center sm:hidden">
-                            <button @click="showingNavigationDropdown = !showingNavigationDropdown"
-                                class="lg:hidden p-2 text-neutral-600 hover:bg-gray-100 rounded-md transition-colors">
-                                <svg v-if="!showingNavigationDropdown" xmlns="http://www.w3.org/2000/svg"
-                                    class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M4 6h16M4 12h16m-7 6h7" />
-                                </svg>
-                                <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
+
+                            <div @click.stop>
+                                <Notification :is-open="isNotificationOpen" @toggle="toggleNotification"
+                                    @close="closeNotification" :notifications="$page.props.notifications">
+                                </Notification>
+
+                                <button @click="toggleUserDropdown"
+                                    class="lg:hidden p-2 text-neutral-500 hover:bg-gray-100 rounded-md transition-colors">
+                                    <svg v-if="!showingNavigationDropdown" xmlns="http://www.w3.org/2000/svg"
+                                        class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 6h16M4 12h16m-7 6h7" />
+                                    </svg>
+                                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -118,10 +200,11 @@ const customerPages = [
                         <ResponsiveNavLink :href="route('warranty')" :active="route().current('warranty')">
                             My Warranty
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('inquiries')" :active="route().current('inquiries')">
+                        <ResponsiveNavLink :href="route('inquiries')" :active="route().current('inquiries') || route().current('create-inquiry')">
                             Inquiries
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('view-products')" :active="route().current('view-products')">
+                        <ResponsiveNavLink :href="route('view-products')"
+                            :active="route().current('view-products') || route().current('products-details') || route().current('product-reviews')">
                             Products
                         </ResponsiveNavLink>
                         <ResponsiveNavLink :href="route('history')" :active="route().current('history')">

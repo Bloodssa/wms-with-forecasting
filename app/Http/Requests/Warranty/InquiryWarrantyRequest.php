@@ -36,6 +36,7 @@ class InquiryWarrantyRequest extends FormRequest
             'attachments.*.image' => 'Each file must be an image.',
             'attachments.*.mimes' => 'Only jpeg, png, jpg, webp formats are allowed.',
             'attachments.*.max' => 'Each image must not exceed 10MB.',
+            'attachments.*.uploaded' => 'File #:position failed to upload. The file might be too large.',
         ];
     }
 }

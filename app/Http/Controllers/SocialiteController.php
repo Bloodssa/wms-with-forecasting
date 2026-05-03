@@ -52,7 +52,7 @@ class SocialiteController extends Controller
             }
 
             // clear the invitation_token
-            // $this->claimWarranty($user);
+            $this->claimWarranty($user);
 
             // log in and regenerate session
             Auth::login($user);

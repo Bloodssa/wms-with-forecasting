@@ -7,12 +7,13 @@ import TextInput from '@/Components/Forms/TextInput.vue';
 import dayjs from 'dayjs';
 import Badge from '@/Components/Badge.vue';
 import EmptyState from '@/Components/EmptyState.vue';
+import Pagination from '@/Components/Pagination.vue';
 
 const props = defineProps({
     warranties: {
         type: Object,
         default: () => ({})
-    }, 
+    },
     filters: Object
 });
 
@@ -119,8 +120,8 @@ const formatDate = (date) => {
         <div class="border border-gray-300 rounded-md overflow-hidden bg-white">
             <table class="w-full border-collapse">
                 <tbody class="divide-y divide-gray-300">
-                    <tr v-if="warranties.data.length" v-for="warranty in warranties.data" :key="warranty.id" @click="goTo(warranty.id)"
-                        class="cursor-pointer hover:bg-gray-50 transition">
+                    <tr v-if="warranties.data.length" v-for="warranty in warranties.data" :key="warranty.id"
+                        @click="goTo(warranty.id)" class="cursor-pointer hover:bg-gray-50 transition">
                         <td class="px-4 py-3 align-middle">
                             <div class="flex items-center gap-4 min-w-0">
                                 <img :src="warranty.product.image_url" alt="{{ warranty.product.name }}"
@@ -165,18 +166,12 @@ const formatDate = (date) => {
                                 </template>
                             </div>
                         </td>
-                        <td class="px-4 py-3 align-middle text-right w-40">
+                        <td class="px-4 py-3 align-middle text-right w-40 relative">
                             <div class="inline-flex w-full justify-end">
                                 <Badge size="md" :type="warranty.status">
                                     {{ warranty.status }}
                                 </Badge>
                             </div>
-                        </td>
-                        <td class="px-6 text-right py-4 whitespace-nowrap text-sm text-neutral-900">
-                            <button
-                                class="text-neutral-500 hover:text-neutral-900 transition p-1 rounded-md hover:bg-gray-100">
-                                <EllipsisVertical />
-                            </button>
                         </td>
                     </tr>
                     <template v-else>
@@ -184,6 +179,9 @@ const formatDate = (date) => {
                     </template>
                 </tbody>
             </table>
+            <div v-if="warranties.links.length > 3" class="px-3 py-4 w-full border-t border-gray-300">
+                <Pagination :links="warranties.links" />
+            </div>
         </div>
     </CustomerLayout>
 </template>

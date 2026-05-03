@@ -10,6 +10,7 @@ import ProductChart from '@/Components/Charts/ProductChart.vue';
 import Table from '@/Components/Table/Table.vue';
 import Avatar from '@/Components/Icons/Avatar.vue';
 import EmptyState from '@/Components/EmptyState.vue';
+import dayjs from 'dayjs';
 
 const props = defineProps({
     reports: {
@@ -40,19 +41,19 @@ const summaryStats = [
         title: 'Active Warranties',
         count: props.reports.stats.activeWarranty,
         icon: ShieldCheck,
-        href: route('warranties')
+        route: route('warranties')
     },
     {
         title: 'Total Warranty Claims',
         count: props.reports.stats.warrantyClaimCount,
         icon: MessageSquareShare,
-        href: route('warranty-inquiries')
+        route: route('warranty-inquiries')
     },
     {
         title: 'Successfull Inquiries',
-        coubt: props.reports.stats.successInquiries,
+        count: props.reports.stats.resolvedInquiry,
         icon: LaptopMinimalCheck,
-        href: route('warranty-inquiries')
+        route: route('warranty-inquiries')
     }
 ];
 const headers = ['Product', 'Customer', 'Expiry Date'];
@@ -130,7 +131,7 @@ const daysLeft = (date) => {
                     Warranty Near-Expiry
                 </h1>
             </div>
-            <Table v-if="reports.nearExpiryWarranties?.length > 0" :headers="headers" :action="true">
+            <Table v-if="reports.nearExpiryWarranties?.length > 0" :headers="headers">
                 <tr v-for="nearExpiry in reports.nearExpiryWarranties" :key="nearExpiry">
                     <td class="table-text">
                         {{ nearExpiry.product.name }}
@@ -141,7 +142,7 @@ const daysLeft = (date) => {
                             <p class="font-semibold">{{ nearExpiry?.user.name }}</p>
                         </div>
                     </td>
-                    <td class="table-text">{{ nearExpiry?.expiry_date }} days left</td>
+                    <td class="table-text">{{ dayjs(nearExpiry?.expiry_date).format('MMM, DD YYYY') }}</td>
                 </tr>
             </Table>
             <EmptyState v-else message="No near expiry warranty of customers" />

@@ -1,11 +1,11 @@
 <script setup>
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import ManagerLayout from '@/Layouts/ManagerLayout.vue';
 import Table from '@/Components/Table/Table.vue';
 import TableSearch from '@/Components/Table/TableSearch.vue';
 import Avatar from '@/Components/Icons/Avatar.vue';
 import Badge from '@/Components/Badge.vue';
-import { EllipsisVertical } from 'lucide-vue-next';
+import { Eye, SearchAlert } from 'lucide-vue-next';
 import EmptyState from '@/Components/EmptyState.vue';
 
 defineProps({
@@ -76,8 +76,14 @@ const daysLeft = (date) => {
                         </td>
                         <td class="table-text">
                             <div class="flex items-center space-x-2">
-                                <Avatar class="h-8 w-8" :name="warranty.user.name" />
-                                <span>{{ warranty.user.name }}</span>
+                                <div v-if="warranty.is_claimed">
+                                    <Avatar class="h-8 w-8" :name="warranty.user.name" />
+                                </div>
+                                <div v-else
+                                    class="flex items-center justify-center w-8 h-8 rounded-full border border-gray-300 bg-neutral-50 shrink-0">
+                                    <SearchAlert class="w-4 h-4 text-neutral-900" />
+                                </div>
+                                <span>{{ warranty.user?.name ?? warranty.claim_email }}</span>
                             </div>
                         </td>
                         <td class="table-text">
@@ -105,11 +111,13 @@ const daysLeft = (date) => {
                                 </p>
                             </div>
                         </td>
-                        <td class="px-6 text-right py-4 whitespace-nowrap text-sm text-neutral-900">
-                            <button
-                                class="text-neutral-500 hover:text-neutral-900 transition p-1 rounded-md hover:bg-gray-100">
-                                <EllipsisVertical />
-                            </button>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-900">
+                            <div class="flex justify-end">
+                                <Link :href="route('view-warranty', warranty.id)"
+                                    class="p-2 border border-gray-300 rounded-md bg-white hover:bg-gray-200 transition duration-150">
+                                    <Eye class="hover:text-neutral-700" />
+                                </Link>
+                            </div>
                         </td>
                     </tr>
                 </Table>

@@ -1,6 +1,7 @@
 <script setup>
 import ManagerLayout from '@/Layouts/ManagerLayout.vue';
-import { Head, Link, useForm, usePoll } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
+import { Head, Link, useForm, usePoll, usePage } from '@inertiajs/vue3';
 import { ArrowLeftFromLine } from 'lucide-vue-next';
 import Progress from '@/Components/Inquiry/Progress.vue';
 import Avatar from '@/Components/Icons/Avatar.vue';
@@ -9,6 +10,7 @@ import Reply from '@/Components/Inquiry/Reply.vue';
 import InputLabel from '@/Components/Forms/InputLabel.vue';
 import Badge from '@/Components/Badge.vue';
 import dayjs from 'dayjs';
+import BaseModal from '@/Components/Modals/BaseModal.vue';
 
 const props = defineProps({
     inquiry: {
@@ -21,19 +23,94 @@ const props = defineProps({
     }
 });
 
+const currentStatus = computed(() =>
+    props.inquiry.status?.value ?? props.inquiry.status
+);
+
 const form = useForm({
     status: props.inquiry.status?.value || props.inquiry.status
 });
 
+// for the update of the status and log message
+const showModal = ref(false);
+const selectedStatus = ref(null);
+const resolutionMessage = ref('');
+const originalStatus = ref(form.status);
+
+const closeModal = () => {
+    showModal.value = false;
+    resolutionMessage.value = '';
+    form.status = originalStatus.value;
+};
+
+const requiresMessage = ['resolved', 'replaced', 'closed'];
+
+const isLocked = computed(() =>
+    requiresMessage.includes(currentStatus.value)
+);
+
+// before submiting show the modal
 const submitStatus = () => {
-    form.patch(route('inquiry-status', props.inquiry.id), {
+    const current = currentStatus.value;
+    const next = form.status;
+
+    if (!isAllowedTransition(current, next)) {
+        form.errors.status = "Invalid status transition.";
+        return;
+    }
+
+    if (requiresMessage.includes(next)) {
+        selectedStatus.value = next;
+        originalStatus.value = next;
+        showModal.value = true;
+        return;
+    }
+
+    sendStatusUpdate();
+};
+
+const sendStatusUpdate = () => {
+    form.transform(data => ({
+        ...data,
+        resolved_message: resolutionMessage.value
+    })).patch(route('inquiry-status', props.inquiry.id), {
         preserveScroll: true,
         onSuccess: () => {
-            // toast after refinement of other uis
+            showModal.value = false;
+            resolutionMessage.value = '';
         }
     });
 };
 
+// days remaining before expiry use created from inquiry and expiry since expiry date is immutable
+const daysRemainingAtSubmission = dayjs(props.inquiry.warranty.expiry_date).diff(dayjs(props.inquiry.created_at), 'day');
+
+// check if its covered during submission
+const wasCovered = daysRemainingAtSubmission >= 0;
+
+// status for options in updae
+const statusFlow = [
+    'open',
+    'pending',
+    'in-progress',
+    'resolved',
+    'replaced',
+    'closed'
+];
+
+const isAllowedTransition = (current, next) => {
+    const currentIndex = statusFlow.indexOf(current);
+    const nextIndex = statusFlow.indexOf(next);
+
+    if (currentIndex === -1 || nextIndex === -1) return false;
+
+    return nextIndex > currentIndex;
+};
+
+const isDone = computed(() => Boolean(props.inquiry.is_done));
+
+const page = usePage();
+const can = computed(() => page.props.can ?? {});
 // poll every five seconds
 // usePoll(5000, {
 //     only: ['messages', 'inquiry'],
@@ -56,6 +133,24 @@ const submitStatus = () => {
                     Back to Inquiries
                 </Link>
             </div>
+            <div v-if="isDone" class="border border-gray-300 rounded-md bg-green-50 text-green-800 p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-semibold text-sm">
+                            Inquiry {{ currentStatus === 'replaced' ? 'Completed via Replacement' : 'Completed' }}
+                        </p>
+                        <p class="text-xs opacity-80">
+                            This inquiry has been marked as {{ currentStatus }} and is no longer active.
+                        </p>
+                    </div>
+                    <Badge :type="currentStatus">
+                        {{ currentStatus }}
+                    </Badge>
+                </div>
+                <p v-if="props.inquiry.resolved_message" class="mt-3 text-sm">
+                    {{ props.inquiry.resolved_message }}
+                </p>
+            </div>
             <Progress :inquiryStatus="props.inquiry.status" />
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div
@@ -70,7 +165,7 @@ const submitStatus = () => {
                         </div>
                     </div>
                     <Messages :inquiryId="props.inquiry.id" :messages="props.messages" />
-                    <Reply :inquiry-id="props.inquiry.id" />
+                    <Reply v-if="!isDone && can.viewInquiryOnly" :inquiry-id="props.inquiry.id" />
                 </div>
                 <div class="space-y-4">
                     <div class="bg-white border border-gray-300 rounded-md">
@@ -79,23 +174,56 @@ const submitStatus = () => {
                                 Update Progress
                             </h1>
                         </div>
+                        <div :class="[
+                            'px-5 py-3 border-b border-gray-300 text-sm font-medium',
+                            wasCovered ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+                        ]">
+                            <template v-if="wasCovered">
+                                Inquired <span class="font-bold">{{ daysRemainingAtSubmission }} days</span> before
+                                warranty expiry.
+                                <span class="block text-xs font-normal opacity-80">(Valid Coverage)</span>
+                            </template>
+                            <template v-else>
+                                Inquired <span class="font-bold">{{ Math.abs(daysRemainingAtSubmission) }} days</span>
+                                after warranty expiry.
+                                <span class="block text-xs font-normal opacity-80">(Expired Coverage)</span>
+                            </template>
+                        </div>
                         <form @submit.prevent="submitStatus" class="space-y-4 p-5">
                             <div>
                                 <InputLabel value="Current Status" for="status" />
-                                <select id="status" v-model="form.status"
+                                <select v-model="form.status"
                                     class="w-full border-gray-300 rounded-md text-sm focus:ring-neutral-900 focus:border-neutral-900 transition">
-                                    <option value="pending">Pending</option>
-                                    <option value="in-progress">In-Progress</option>
-                                    <option value="resolved">Resolved</option>
-                                    <option value="replaced">Replaced</option>
-                                    <option value="closed">Closed</option>
+                                    <option v-for="status in statusFlow" :key="status" :value="status"
+                                        :disabled="isLocked || (!isAllowedTransition(currentStatus, status) && !requiresMessage.includes(status))">
+                                        {{ status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ') }}
+                                    </option>
                                 </select>
                                 <div v-if="form.errors.status" class="text-red-500 text-xs mt-1">
                                     {{ form.errors.status }}
                                 </div>
                             </div>
+                            <BaseModal :show="showModal" title="Provide Resolution Details"
+                                subtitle="This action requires technician explanation" size="md" @close="closeModal">
+                                <div class="space-y-4">
 
-                            <button type="submit" :disabled="form.processing"
+                                    <textarea v-model="resolutionMessage" class="w-full border rounded-md p-3 text-sm"
+                                        rows="5" placeholder="Explain what was done..."></textarea>
+
+                                    <div class="flex justify-end gap-2">
+                                        <button @click="closeModal" class="px-4 py-2 text-sm rounded hover:bg-gray-100">
+                                            Cancel
+                                        </button>
+
+                                        <button @click="sendStatusUpdate"
+                                            class="px-4 py-2 bg-neutral-900 text-white rounded text-sm">
+                                            Confirm
+                                        </button>
+                                    </div>
+
+                                </div>
+                            </BaseModal>
+                            <button v-if="can.viewInquiryOnly" type="submit" :disabled="form.processing"
                                 class="w-full bg-neutral-900 text-white py-2.5 rounded-md text-sm font-semibold hover:bg-neutral-800 transition disabled:opacity-50 flex justify-center items-center">
                                 <span v-if="form.processing">Updating...</span>
                                 <span v-else>Apply Status Change</span>

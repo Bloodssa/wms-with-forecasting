@@ -20,6 +20,7 @@ return new class extends Migration
             $table->text('message');
             $table->enum('status', ['open', 'pending', 'in-progress', 'closed', 'resolved', 'replaced'])->index();
             $table->json('attachments')->nullable();
+            $table->timestamp('read_at')->nullable()->index();
             $table->timestamps();
 
             // index the created_at for the dashboard apex chart for faster fetch

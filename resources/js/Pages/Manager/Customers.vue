@@ -34,7 +34,7 @@ const headers = ['Customer', 'Email', 'Total Warranties', 'Expired Warranties', 
                     :dropdown="true"
                     :route="route('customers')"
                 />
-                <Table v-if="customers.data?.length > 0" :headers="headers" :datas="customers" :action="true">
+                <Table v-if="customers.data?.length > 0" :headers="headers" :datas="customers">
                     <tr v-for="customer in customers.data" :key="customer.id">
                         <td class="table-text">
                             <div class="flex items-center space-x-2">
@@ -49,11 +49,6 @@ const headers = ['Customer', 'Email', 'Total Warranties', 'Expired Warranties', 
                             <Badge :type="customer?.last_inquiry_status">
                                 {{ customer?.last_inquiry_status ?? 'none' }}
                             </Badge>
-                        </td>
-                        <td class="px-6 text-right py-4 whitespace-nowrap text-sm text-neutral-900">
-                            <button class="text-neutral-500 hover:text-neutral-900 transition p-1 rounded-md hover:bg-gray-100">
-                                <EllipsisVertical />
-                            </button>
                         </td>
                     </tr>
                 </Table>

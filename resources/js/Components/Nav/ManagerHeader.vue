@@ -2,12 +2,18 @@
 import { Link, usePage, router } from '@inertiajs/vue3'
 import { computed, ref } from 'vue';
 import Avatar from '@/Components/Icons/Avatar.vue';
+import Notification from './Notification.vue';
+import { ShieldAlert, MessageSquareQuote, Star, ClipboardCheck, CircleAlert } from 'lucide-vue-next';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+
+dayjs.extend(relativeTime);
 
 const vClickOutside = {
     mounted(el, binding) {
         el.clickOutsideEvent = (event) => {
             // check if the click event was outside of the element and its children of the element
-            if(!(el === event.target || el.contains(event.target))) {
+            if (!(el === event.target || el.contains(event.target))) {
                 binding.value();
             }
         };
@@ -28,7 +34,45 @@ const page = usePage();
 const user = computed(() => page.props.auth.user);
 const dropDownOpen = ref(false);
 
+const notifications = computed(() => page.props.notifications || []);
+
+const isNotificationOpen = ref(false);
+
+const toggleUserDropdown = () => {
+    dropDownOpen.value = !dropDownOpen.value;
+    isNotificationOpen.value = false; // Close notifications when profile opens
+};
+
+const toggleNotification = () => {
+    isNotificationOpen.value = !isNotificationOpen.value;
+    dropDownOpen.value = false;
+};
+
+const closeNotification = () => {
+    isNotificationOpen.value = false;
+};
+
 const logout = () => router.post(route('logout'));
+
+const getIcon = (type) => {
+    switch (type) {
+        case 'danger': return ShieldAlert;
+        case 'info': return MessageSquareQuote;
+        case 'warning': return Star;
+        case 'primary': return ClipboardCheck;
+        default: return CircleAlert;
+    }
+};
+
+const getIconClass = (type) => {
+    switch (type) {
+        case 'danger': return 'text-red-600 bg-red-50';
+        case 'info': return 'text-blue-600 bg-blue-50';
+        case 'warning': return 'text-amber-500 bg-amber-50';
+        case 'primary': return 'text-emerald-600 bg-emerald-50';
+        default: return 'text-gray-600 bg-gray-50';
+    }
+};
 </script>
 
 <template>
@@ -47,16 +91,10 @@ const logout = () => router.post(route('logout'));
 
         <div class="relative">
             <div class="flex space-x-3 items-center">
-                <button
-                    class="border border-gray-300 p-2 rounded-full hover:bg-gray-100 transition-colors duration-150">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="text-neutral-900" width="23" height="23"
-                        fill="currentColor" viewBox="0 0 16 16">
-                        <path
-                            d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2M8 1.918l-.797.161A4 4 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4 4 0 0 0-3.203-3.92zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5 5 0 0 1 13 6c0 .88.32 4.2 1.22 6" />
-                    </svg>
-                </button>
+                <Notification :is-open="isNotificationOpen" :notifications="notifications" @toggle="toggleNotification" @close="closeNotification">
+                </Notification>
 
-                <div class="flex items-center text-black space-x-2" @click.stop="dropDownOpen = !dropDownOpen">
+                <div class="flex items-center text-black space-x-2" @click.stop="toggleUserDropdown">
                     <Avatar :name="user.name" class="h-9 w-9" />
 
                     <span class="mr-1 block cursor-pointer font-semibold">
@@ -70,7 +108,7 @@ const logout = () => router.post(route('logout'));
                     </svg>
                 </div>
             </div>
-            
+
             <div v-if="dropDownOpen" v-click-outside="() => dropDownOpen = false"
                 class="absolute right-0 mt-4.25 flex w-65 flex-col rounded-md border border-gray-300 bg-white p-2">
                 <div>
@@ -84,13 +122,13 @@ const logout = () => router.post(route('logout'));
 
                 <ul class="flex flex-col mt-2">
                     <li>
-                        <Link :href="route('profile.edit')"
+                        <Link :href="route('manager.profile')"
                             class="group flex items-center gap-3 rounded-md px-3 py-2 font-normal text-black hover:bg-gray-100 hover:text-black">
-                        <svg fill="currentColor" class="h-6 w-6" viewBox="0 0 24 24">
-                            <path
-                                d="M12 3.5C7.30558 3.5 3.5 7.30558 3.5 12C3.5 14.1526 4.3002 16.1184 5.61936 17.616C6.17279 15.3096 8.24852 13.5955 10.7246 13.5955H13.2746C15.7509 13.5955 17.8268 15.31 18.38 17.6167C19.6996 16.119 20.5 14.153 20.5 12C20.5 7.30558 16.6944 3.5 12 3.5ZM17.0246 18.8566V18.8455C17.0246 16.7744 15.3457 15.0955 13.2746 15.0955H10.7246C8.65354 15.0955 6.97461 16.7744 6.97461 18.8455V18.856C8.38223 19.8895 10.1198 20.5 12 20.5C13.8798 20.5 15.6171 19.8898 17.0246 18.8566ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM11.9991 7.25C10.8847 7.25 9.98126 8.15342 9.98126 9.26784C9.98126 10.3823 10.8847 11.2857 11.9991 11.2857C13.1135 11.2857 14.0169 10.3823 14.0169 9.26784C14.0169 8.15342 13.1135 7.25 11.9991 7.25ZM8.48126 9.26784C8.48126 7.32499 10.0563 5.75 11.9991 5.75C13.9419 5.75 15.5169 7.32499 15.5169 9.26784C15.5169 11.2107 13.9419 12.7857 11.9991 12.7857C10.0563 12.7857 8.48126 11.2107 8.48126 9.26784Z" />
-                        </svg>
-                        Edit Profile
+                            <svg fill="currentColor" class="h-6 w-6" viewBox="0 0 24 24">
+                                <path
+                                    d="M12 3.5C7.30558 3.5 3.5 7.30558 3.5 12C3.5 14.1526 4.3002 16.1184 5.61936 17.616C6.17279 15.3096 8.24852 13.5955 10.7246 13.5955H13.2746C15.7509 13.5955 17.8268 15.31 18.38 17.6167C19.6996 16.119 20.5 14.153 20.5 12C20.5 7.30558 16.6944 3.5 12 3.5ZM17.0246 18.8566V18.8455C17.0246 16.7744 15.3457 15.0955 13.2746 15.0955H10.7246C8.65354 15.0955 6.97461 16.7744 6.97461 18.8455V18.856C8.38223 19.8895 10.1198 20.5 12 20.5C13.8798 20.5 15.6171 19.8898 17.0246 18.8566ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM11.9991 7.25C10.8847 7.25 9.98126 8.15342 9.98126 9.26784C9.98126 10.3823 10.8847 11.2857 11.9991 11.2857C13.1135 11.2857 14.0169 10.3823 14.0169 9.26784C14.0169 8.15342 13.1135 7.25 11.9991 7.25ZM8.48126 9.26784C8.48126 7.32499 10.0563 5.75 11.9991 5.75C13.9419 5.75 15.5169 7.32499 15.5169 9.26784C15.5169 11.2107 13.9419 12.7857 11.9991 12.7857C10.0563 12.7857 8.48126 11.2107 8.48126 9.26784Z" />
+                            </svg>
+                            Edit Profile
                         </Link>
                     </li>
                     <li>

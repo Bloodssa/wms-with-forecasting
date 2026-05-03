@@ -18,17 +18,26 @@ defineProps({
     border: {
         type: Boolean,
         default: true
+    },
+    height: {
+        type: String,
+        default: 'min-h-100'
     }
 });
 </script>
 
 <template>
-    <div :class="border ? 'border-t border-gray-300' : ''" class="flex min-h-100 w-full flex-col items-center justify-center bg-neutral-50/50 px-6 py-12 text-center transition-all hover:border-neutral-300">
+    <div :class="[
+        border ? 'border-t border-gray-300' : '',
+        height,
+        'flex w-full flex-col items-center justify-center bg-neutral-50/50 px-6 py-12 text-center transition-all hover:border-neutral-300'
+    ]">
         <div class="relative mb-6">
             <div class="absolute -inset-1 rounded-full bg-neutral-100 blur-sm"></div>
-            <div class="relative flex h-16 w-16 items-center justify-center rounded-full bg-white ring-1 ring-neutral-200">
+            <div
+                class="relative flex h-16 w-16 items-center justify-center rounded-full bg-white ring-1 ring-neutral-200">
                 <Boxes class="h-10 w-10 text-neutral-900" stroke-width="1.5" />
-            </div>  
+            </div>
         </div>
 
         <h2 class="text-lg font-bold text-neutral-900">No records found</h2>

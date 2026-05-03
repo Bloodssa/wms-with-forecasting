@@ -4,12 +4,28 @@ import InputLabel from '@/Components/Forms/InputLabel.vue';
 import PrimaryButton from '@/Components/Forms/PrimaryButton.vue';
 import TextInput from '@/Components/Forms/TextInput.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import { ChevronDown } from 'lucide-vue-next';
 import AuthLayout from '@/Layouts/AuthLayout.vue';
 import MarkLogo from '@/Components/Icons/MarkLogo.vue';
+import dayjs from 'dayjs';
+
+const props = defineProps({
+    warranties: {
+        type: Object,
+        default: () => ({})
+    },
+    email: {
+        type: String,
+        default: ''
+    }
+});
+
+const isOpen = ref(false);
 
 const form = useForm({
     name: '',
-    email: '',
+    email: props.email,
     password: '',
     password_confirmation: '',
 });
@@ -20,6 +36,10 @@ const submit = () => {
         onError: () => form.reset('password_confirmation'),
     });
 };
+
+const formatDate = (date) => {
+    return dayjs(date).format('MMM DD, YYYY');
+};
 </script>
 
 <template>
@@ -27,7 +47,7 @@ const submit = () => {
 
         <Head title="Register" />
 
-        <form @submit.prevent="submit">
+        <form @submit.prevent="submit" class="mb-10">
             <div class="flex flex-col items-center space-y-3">
                 <Link href="/">
                     <MarkLogo />
@@ -38,11 +58,66 @@ const submit = () => {
                 <div class="flex flex-col items-center">
                     <p class="text-gray-500 mt-1"> Register to start tracking device warranties.</p>
                 </div>
+                <div v-if="props.warranties?.length"
+                    class="w-full my-2 border border-gray-300 rounded-md overflow-hidden bg-white">
+                    <button type="button" @click="isOpen = !isOpen"
+                        class="w-full flex items-center justify-between p-4 bg-neutral-50 hover:bg-neutral-100 transition-colors duration-200 text-left">
+                        <div class="space-y-1">
+                            <p class="text-sm text-neutral-500">
+                                Registering Warranty for:
+                            </p>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-neutral-900">
+                                    Warranty Registration
+                                </span>
+                                <span
+                                    class="text-[12px] px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full font-medium">
+                                    {{ props.warranties.length }} {{ props.warranties.length > 1 ? 'Items' : 'Item' }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 text-neutral-400">
+                            <span class="text-xs font-medium">{{ isOpen ? 'Hide details' : 'View details' }}</span>
+                            <ChevronDown :class="{ 'rotate-180': isOpen }" class="w-5 h-5 transition-transform duration-300" />
+                        </div>
+                    </button>
+
+                    <div v-show="isOpen"
+                        class="border-t border-gray-300 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div class="p-4 space-y-4 max-h-64 overflow-y-auto custom-scrollbar bg-white">
+                            <div v-for="item in props.warranties" :key="item.serial_number"
+                                class="flex items-center gap-3">
+                                <img :src="item.product.image_url"
+                                    class="h-10 w-10 object-cover rounded-md border border-gray-300" />
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-[13px] font-semibold text-neutral-900 truncate">
+                                        {{ item.product.name }}
+                                    </p>
+                                    <p class="text-[12px] text-neutral-500 tracking-tight">
+                                        SN: {{ item.serial_number }}
+                                    </p>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <p class="text-[12px] text-neutral-500 font-semibold">Expires</p>
+                                    <p class="text-[12px] text-neutral-500">
+                                        {{ formatDate(item.expiry_date) }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white px-4 py-2 border-t border-gray-200 text-center">
+                            <p class="text-[12px] text-neutral-400">
+                                Purchased on {{ formatDate(props.warranties[0]?.purchase_date) }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div>
                 <InputLabel for="name" value="Name" />
 
-                <TextInput id="name" type="text" class="mt-1 block w-full" v-model="form.name"  autofocus
+                <TextInput id="name" type="text" class="mt-1 block w-full" v-model="form.name" autofocus
                     autocomplete="name" />
 
                 <InputError class="mt-2" :message="form.errors.name" />
@@ -51,7 +126,7 @@ const submit = () => {
             <div class="mt-4">
                 <InputLabel for="email" value="Email" />
 
-                <TextInput id="email" type="email" class="mt-1 block w-full" v-model="form.email" 
+                <TextInput id="email" type="email" class="mt-1 block w-full" v-model="form.email"
                     autocomplete="username" />
 
                 <InputError class="mt-2" :message="form.errors.email" />
@@ -60,7 +135,7 @@ const submit = () => {
             <div class="mt-4">
                 <InputLabel for="password" value="Password" />
 
-                <TextInput id="password" type="password" class="mt-1 block w-full" v-model="form.password" 
+                <TextInput id="password" type="password" class="mt-1 block w-full" v-model="form.password"
                     autocomplete="new-password" />
 
                 <InputError class="mt-2" :message="form.errors.password" />
@@ -70,13 +145,14 @@ const submit = () => {
                 <InputLabel for="password_confirmation" value="Confirm Password" />
 
                 <TextInput id="password_confirmation" type="password" class="mt-1 block w-full"
-                    v-model="form.password_confirmation"  autocomplete="new-password" />
+                    v-model="form.password_confirmation" autocomplete="new-password" />
 
                 <InputError class="mt-2" :message="form.errors.password_confirmation" />
             </div>
 
             <div class="flex items-center justify-end mt-4 mb-4">
-                <PrimaryButton class="w-full text-center" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                <PrimaryButton class="w-full text-center" :class="{ 'opacity-25': form.processing }"
+                    :disabled="form.processing">
                     Register
                 </PrimaryButton>
             </div>

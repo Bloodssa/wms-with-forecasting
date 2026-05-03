@@ -1,10 +1,48 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import ManagerHeader from '@/Components/Nav/ManagerHeader.vue';
 import SideBar from '@/Components/Nav/SideBar.vue';
+import { useToast } from "primevue/usetoast";
+import Toast from 'primevue/toast'; 
 
 const isLargeScreen = ref(false);
 const sideBarOpen = ref(false);
+const page = usePage();
+const toast = useToast();
+
+watch(
+    () => page.props.flash,
+    (flash) => {
+        if (flash?.success) {
+            toast.add({ 
+                severity: 'success', 
+                summary: 'Success', 
+                detail: flash.success, 
+                life: 3000 
+            });
+        }
+        
+        if (flash?.error) {
+            toast.add({ 
+                severity: 'error', 
+                summary: 'Error', 
+                detail: flash.error, 
+                life: 5000 
+            });
+        }
+
+        if (flash?.warning) {
+            toast.add({ 
+                severity: 'warn', 
+                summary: 'Warning', 
+                detail: flash.warning, 
+                life: 4000 
+            });
+        }
+    },
+    { deep: true, immediate: true }
+);
 
 const checkScreenSize = () => {
     isLargeScreen.value = window.innerWidth >= 1025;
@@ -28,6 +66,7 @@ onUnmounted(() => {
              @click="sideBarOpen = false"
              class="fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 lg:hidden">
         </div>
+        <Toast />
 
         <SideBar :sideBarOpen="sideBarOpen" @toggle-sidebar="sideBarOpen = !sideBarOpen" />
 

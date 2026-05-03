@@ -1,36 +1,67 @@
 <script setup>
-defineProps({
+import { computed } from 'vue';
+
+const props = defineProps({
     show: Boolean,
-    maxWidth: {
+    title: String,
+    subtitle: String,
+    size: {
         type: String,
-        default: '2xl'
+        default: 'md'
+    },
+    height: {
+        type: String,
+        default: 'auto'
     }
 });
 
 const emit = defineEmits(['close']);
-const close = () => {
-    emit('close');
-};
+const close = () => emit('close');
+
+const hasHeader = computed(() => {
+    return props.title?.trim() || props.subtitle?.trim();
+});
+
+const modalSize = computed(() => {
+    return {
+        sm: 'max-w-xl',
+        md: 'max-w-3xl',
+        lg: 'max-w-4xl',
+        xl: 'max-w-6xl',
+        full: 'max-w-full mx-4'
+    }[props.size] || 'max-w-2xl';
+});
+
+const modalHeight = computed(() => {
+    return {
+        auto: 'max-h-[90vh]',
+        sm: 'max-h-[50vh]',
+        md: 'max-h-[75vh]',
+        lg: 'max-h-[85vh]',
+        full: 'h-[90vh]'
+    }[props.height] || 'max-h-[90vh]'
+});
 </script>
 
 <template>
     <Teleport to="body">
-        <div v-if="show" class="fixed inset-0 z-100 overflow-y-auto px-4 py-6 sm:px-0 flex items-center">
-            <div class="fixed inset-0 transform transition-all" @click="close">
-                <div class="absolute inset-0 bg-gray-500/50 backdrop-blur-sm" />
-            </div>
-
-            <div class="mb-6 bg-white rounded-xl overflow-hidden shadow-2xl transform transition-all sm:w-full sm:mx-auto relative"
-                :class="maxWidth === '2xl' ? 'max-w-2xl' : 'max-w-3xl'">
-                <button @click="close" class="absolute right-5 top-5 text-gray-400 hover:text-gray-600">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 6L6 18M6 6l12 12" />
-                    </svg>
-                </button>
-
-                <div class="p-6 lg:p-11">
-                    <slot v-if="show" />
+        <div v-if="show" class="fixed inset-0 flex items-center justify-center p-4 overflow-y-auto z-9999"
+            @click.self="close">
+            <div class="fixed inset-0 h-full w-full bg-gray-400/10 backdrop-blur-[7px]" @click.self="close"></div>
+            <div :class="[modalSize, modalHeight]" class="no-scrollbar relative flex w-full flex-col overflow-y-auto rounded-md bg-white p-6 lg:p-11 shadow-2xl">
+                <div class="flex" :class="hasHeader ? 'justify-between mb-5' : 'justify-end mb-0'">
+                    <div v-if="hasHeader">
+                        <h4 class="text-[24px] font-semibold text-gray-800">{{ props.title }}</h4>
+                        <p class="text-sm text-gray-500">{{ props.subtitle }}</p>
+                    </div>
+                    <button @click="close" type="button" :class="hasHeader ? '' : 'mb-4'"
+                        class="z-10 flex h-11 w-11 items-center justify-center rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200 transition-colors">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
+                <slot v-if="show" />
             </div>
         </div>
     </Teleport>

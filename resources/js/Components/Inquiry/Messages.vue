@@ -4,6 +4,8 @@ import { usePage } from '@inertiajs/vue3';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import Avatar from '../Icons/Avatar.vue';
+import VueEasyLightbox from 'vue-easy-lightbox';
+import Badge from '../Badge.vue';
 
 // init days js for diffHuman like carbon in laravel
 dayjs.extend(relativeTime);
@@ -21,7 +23,7 @@ watch(() => props.messages, (newVal) => {
     allMessages.value = newVal;
 }, { deep: true });
 
-onMounted(() => { 
+onMounted(() => {
     window.Echo.private(`inquiry.${props.inquiryId}`)
         .listen('.ResponseSent', (e) => {
             // check message already exists to prevent duplicates
@@ -61,17 +63,25 @@ const authUser = page.props.auth.user;
 const chatContainer = ref(null);
 
 // who is auth then put the message of the auth if its true
+const isInternal = (user) => {
+    return ['admin', 'staff', 'technician'].includes(user?.role);
+};
+
 const isMe = (msg) => {
-    return msg.type === 'message' && msg.user?.id === authUser.id;
+    if (isInternal(authUser)) {
+        return isInternal(msg.user);
+    }
+
+    return msg.user?.id === authUser.id;
 };
 
 // format date with dayjs()
 const formatTimestamp = (date) => {
     if (!date) return '';
     const d = dayjs(date);
-    
-    return d.isAfter(currentTime.value.subtract(1, 'day')) 
-        ? d.fromNow() 
+
+    return d.isAfter(currentTime.value.subtract(1, 'day'))
+        ? d.fromNow()
         : d.format('MMMM D, YYYY, h:mm a');
 };
 
@@ -85,15 +95,27 @@ const scrollToBottom = async () => {
 
 onMounted(scrollToBottom);
 watch(() => props.messages, scrollToBottom, { deep: true });
+
+// image lightbox
+const isLightboxOpen = ref(false);
+const activeImageIndex = ref(0);
+const activeImagesArray = ref([]);
+
+const openPreview = (attachments, index) => {
+    activeImagesArray.value = attachments.map(path => `/storage/${path}`);
+    activeImageIndex.value = index;
+    isLightboxOpen.value = true;
+};
+
+const handleHide = () => {
+    isLightboxOpen.value = false;
+};
 </script>
 
 <template>
-    <div 
-        ref="chatContainer"
-        class="flex-1 overflow-y-auto p-5 space-y-4 bg-white scroll-smooth"
-    >
+    <div ref="chatContainer" class="flex-1 overflow-y-auto p-5 space-y-4 bg-white scroll-smooth">
         <div v-for="msg in allMessages" :key="msg.id">
-            
+
             <div v-if="msg.type === 'updates'" class="relative flex items-center justify-center my-8">
                 <div class="absolute inset-0 flex items-center">
                     <div class="w-full border-t border-gray-300"></div>
@@ -111,11 +133,13 @@ watch(() => props.messages, scrollToBottom, { deep: true });
                     <div class="flex items-center gap-3 mb-4">
                         <div class="p-2 bg-neutral-900 rounded-md text-white">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-sm font-bold text-neutral-900">Inquiry {{ msg.status_label || msg.status }}</h3>
+                            <h3 class="text-sm font-bold text-neutral-900">Inquiry {{ msg.status_label || msg.status }}
+                            </h3>
                             <p class="text-xs text-neutral-500">{{ dayjs(msg.created_at).format('MMMM D, YYYY') }}</p>
                         </div>
                     </div>
@@ -124,21 +148,24 @@ watch(() => props.messages, scrollToBottom, { deep: true });
                     </div>
                     <div class="mt-4 pt-4 border-t border-gray-300 flex justify-between items-center">
                         <span class="text-sm font-semibold text-neutral-500">{{ msg.user?.name }}</span>
-                        <span class="px-2 py-1 text-xs font-bold rounded bg-green-100 text-green-800 uppercase">
+                        <Badge :type="msg.status_label || msg.status">
                             {{ msg.status_label || msg.status }}
-                        </span>
+                        </Badge>
                     </div>
                 </div>
             </div>
 
             <div v-else :class="['flex', isMe(msg) ? 'justify-end' : 'justify-start']">
                 <div :class="['flex items-end gap-2', isMe(msg) ? 'flex-row-reverse' : 'items-start']">
-                    
+
                     <div v-if="!isMe(msg)" class="shrink-0">
                         <Avatar :name="msg.user?.name?.charAt(0) ?? 'S'" class="h-8 w-8" />
                     </div>
 
                     <div :class="['flex flex-col', isMe(msg) ? 'items-end' : 'items-start']">
+                        <div v-if="!isMe(msg)" class="text-xs text-neutral-500 mb-1 px-1">
+                            {{ msg.user?.name }}
+                        </div>
                         <div :class="[
                             'p-3 rounded-2xl text-sm max-w-md wrap-break-word shadow-sm',
                             isMe(msg) ? 'bg-neutral-900 text-white rounded-br-none' : 'bg-gray-100 text-neutral-900 rounded-bl-none'
@@ -146,18 +173,13 @@ watch(() => props.messages, scrollToBottom, { deep: true });
                             {{ msg.message }}
                         </div>
 
-                        <div v-if="msg.attachments?.length" 
-                             :class="['flex flex-wrap gap-1 mt-2', isMe(msg) ? 'justify-end' : 'justify-start']"
-                        >
-                            <a v-for="(path, index) in msg.attachments" 
-                               :key="index" 
-                               :href="`/storage/${path}`" 
-                               target="_blank"
-                            >
+                        <div v-if="msg.attachments?.length"
+                            :class="['flex flex-wrap gap-1 mt-2', isMe(msg) ? 'justify-end' : 'justify-start']">
+                            <div v-for="(path, index) in msg.attachments" :key="index" class="cursor-pointer"
+                                @click="openPreview(msg.attachments, index)">
                                 <img :src="`/storage/${path}`"
-                                     class="h-24 w-24 object-cover rounded-md border border-gray-200 hover:opacity-80 transition"
-                                />
-                            </a>
+                                    class="h-24 w-24 object-cover rounded-md border border-gray-200 hover:opacity-80 transition" />
+                            </div>
                         </div>
 
                         <span class="text-[11px] tracking-wide text-neutral-500 mt-1 px-1">
@@ -166,7 +188,8 @@ watch(() => props.messages, scrollToBottom, { deep: true });
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
+    <vue-easy-lightbox :visible="isLightboxOpen" :imgs="activeImagesArray" :index="activeImageIndex"
+        @hide="handleHide" />
 </template>

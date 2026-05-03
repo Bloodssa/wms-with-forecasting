@@ -4,7 +4,7 @@
 
 Hello **{{ $warranty->user->name }}**,
 
-This is a friendly reminder that your product warranty for **{{ $warranty->product->name }}** is set to expire in **30 days**. 
+This is a friendly reminder that your product warranty for **{{ $warranty->product->name }}** is set to expire in **{{ (int) now()->diffInDays($warranty->expiry_date, false) }}** days. 
 
 To ensure you continue to receive support and coverage, we recommend reviewing your product status or checking for any available extension plans.
 

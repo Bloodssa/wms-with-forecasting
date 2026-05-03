@@ -13,14 +13,16 @@ class InquiryResponse extends Model
         'warranty_inquiries_id',
         'message',
         'type',
-        'attachments'
+        'attachments',
+        'read_at'
     ];
 
     protected $casts = [
         'attachments' => 'array',
+        'read_at' => 'datetime'
     ];
 
-    protected $touches = ['warrantyInquiries'];
+    // protected $touches = ['warrantyInquiries'];
 
     public function user(): BelongsTo
     {

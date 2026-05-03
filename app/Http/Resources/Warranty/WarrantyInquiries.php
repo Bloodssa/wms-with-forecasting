@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Resources;
+namespace App\Http\Resources\Warranty;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -21,6 +21,7 @@ class WarrantyInquiries extends JsonResource
             'id' => $this->id,
             'message' => Str::limit($this->message, 15, '...'),
             'status' => $this->status,
+            'unread_messages_count' => $this->unread_messages_count,
             'submitted_at' => $localDate->gt(now()->subDay()) 
                 ? $localDate->diffForHumans() : $localDate->format('M d, Y'),
             'user' => [

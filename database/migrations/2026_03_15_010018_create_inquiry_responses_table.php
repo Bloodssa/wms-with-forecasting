@@ -20,6 +20,7 @@ return new class extends Migration
             $table->text('message');
             $table->enum('type', ['message', 'updates', 'solution'])->default('message');
             $table->json('attachments')->nullable();
+            $table->timestamp('read_at')->nullable()->index();
             $table->timestamps();
         });
     }

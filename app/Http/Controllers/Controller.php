@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enum\WarrantyStatusType;
 use App\Models\User;
 use App\Models\Warranty;
+use Illuminate\Support\Facades\Log;
 
 abstract class Controller
 {
@@ -13,26 +14,36 @@ abstract class Controller
      */
     protected function claimWarranty(User $user)
     {
+        Log::info('claiming');
         // check if there is a set claim_email in the session if not set to current google login email
-        $warrantyId = session('claim_warranty');
+        $warrantyId = session('claim_warranty_id', []);
 
-        if (!$warrantyId) {
+        // there is nothing to claim
+        if (empty($warrantyId)) {
             return;
         }
 
-        $warrantyClaim = Warranty::where('id', $warrantyId)->where('is_claimed', false)->first();
+        // need review
+        // only smae email can claim the warranty
+        // if (strtolower($user->email) !== strtolower($claimEmail)) {
+        //     return;
+        // }
 
-        if ($warrantyClaim) {
-            // set null for one claim only
-            $warrantyClaim->update([
+        Warranty::query()
+            ->whereIn('id', $warrantyId)
+            ->where('is_claimed', false)
+            ->update([
                 'user_id' => $user->id,
                 'is_claimed' => true,
-                'status' => WarrantyStatusType::ACTIVE->value
+                'status' => WarrantyStatusType::ACTIVE->value,
+                'updated_at'  => now(),
             ]);
-        }
 
         // remove the claim_email session set in the showRegister
-        session()->forget('claim_warranty');
+        session()->forget([
+            'claim_email',
+            'claim_warranty_id'
+        ]);
     }
 
     /**

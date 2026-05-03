@@ -10,23 +10,18 @@ Your warranty has been **successfully recorded in our system**, and your product
 <x-mail::panel>
 ###  Product Information
 
-**Product Name:** {{ $warranty->product->name }} <br>
-**Serial Number:** `{{ $warranty->serial_number }}` <br>
-**Warranty Coverage Until:** {{ $warranty->expiry_date->format('F d, Y') }}
+@foreach ($warranties as $warranty)
+    Product Name: {{ $warranty->product->name }}
+        Serial Number: {{ $warranty->serial_number }}
+        Warranty Coverage Until: {{ $warranty->expiry_date->format('F d, Y') }}
+@endforeach
 </x-mail::panel>
 
-To manage your warranty, track its status, and receive important notifications, please **claim your account** by clicking the button below.
+To manage your warranty, track its status, report product issue's and receive important notifications, please **claim your account** by clicking the button below.
 
 <x-mail::button :url="$registrationUrl" color="success">
 Claim Your Account
 </x-mail::button>
-
-Once your account is activated, you will be able to:
-
-* View your registered products
-* Monitor your warranty status
-* Receive reminders before your warranty expires
-* Submit service or repair inquiries
 
 Thank you for choosing **{{ config('app.name') }}**.
 

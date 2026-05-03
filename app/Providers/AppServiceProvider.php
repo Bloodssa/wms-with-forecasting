@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
@@ -23,5 +24,22 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::prefetch(concurrency: 3);
         JsonResource::withoutWrapping();
+
+        Gate::define('view-admin-area', function ($user) {
+            return $user->isAdmin();
+        });
+
+        Gate::define('can-register-warranty', function($user) {
+            return $user->isStaff() || $user->isAdmin();
+        });
+
+        Gate::define('can-add', function ($user) {
+            return $user->isStaff() || $user->isAdmin();
+        });
+
+        Gate::define('view-inquiry-only', function($user) {
+            return !$user->isStaff();
+        });
+        
     }
 }

@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Enum\InquiryStatusType;
 use App\Enum\WarrantyStatusType;
+use App\Models\InquiryResponse;
+use App\Models\Invoice;
 use App\Models\Product;
+use App\Models\ProductReview;
 use App\Models\Warranty;
 use App\Models\WarrantyInquiries;
 use Illuminate\Http\Request;
@@ -55,6 +58,13 @@ class CustomerController extends Controller
             ],
             'recentlyPurchased' => $recentlyPurchased,
             'expiringWarranties' => $expiringWarranties,
+            'products' => Product::query()
+                ->with(['category:id,name'])
+                ->withAvg('reviews as averageRating', 'rating')
+                ->withCount('reviews')
+                ->latest()
+                ->limit(10)
+                ->get()
         ]);
     }
 
@@ -62,7 +72,7 @@ class CustomerController extends Controller
     {
         $warranties = Warranty::query()
             ->select(['id', 'serial_number', 'status', 'expiry_date', 'purchase_date', 'product_id'])
-            ->with(['product' => function($query) {
+            ->with(['product' => function ($query) {
                 $query->select([
                     'id',
                     'name',
@@ -71,6 +81,14 @@ class CustomerController extends Controller
                     'brand'
                 ]);
             }, 'product.category:id,name'])
+            ->withCount([ // count unread messages that send by technician
+                'inquiries as unread_message_count' => function ($q) {
+                    $q->whereHas('responses', function ($q2) {
+                        $q2->whereNull('read_at')
+                            ->where('user_id', '!=', Auth::id());
+                    });
+                }
+            ])
             ->whereUserId(Auth::user()->id)
             ->when($request->search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
@@ -80,11 +98,12 @@ class CustomerController extends Controller
                         });
                 });
             })->when($request->status, function ($query, $status) {
-                if ($status === 'active') $query->whereDate('expiry_date', '>', now()->addDays(30));
+                if ($status === 'active') $query->where('expiry_date', '>', now()->addDays(30));
                 if ($status === 'near-expiry') $query->whereBetween('expiry_date', [now(), now()->addDays(30)]);
-                if ($status === 'expired') $query->whereDate('expiry_date', '<', now());
+                if ($status === 'expired') $query->where('expiry_date', '<', now());
             })
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('Customer/Warranties', [
             'warranties' => $warranties,
@@ -97,13 +116,15 @@ class CustomerController extends Controller
         $inquiries = WarrantyInquiries::query()
             ->select(['id', 'warranty_id', 'message', 'status', 'updated_at'])
             ->with([
-                'warranty' => function($query) {
-                    $query->select(['id', 'product_id', 'status', 'serial_number']);
-                },
-                'warranty.product' => function($query) {
-                    $query->select(['id', 'category_id', 'brand', 'name', 'product_image_url']);
-                },
+                'warranty:id,product_id,status,serial_number',
+                'warranty.product:id,category_id,brand,name,product_image_url',
                 'warranty.product.category:id,name'
+            ])
+            ->withCount([
+                'responses as unread_count' => function ($query) {
+                    $query->whereNull('read_at')
+                        ->where('user_id', '!=', Auth::id());
+                }
             ])
             ->whereUserId(Auth::user()->id)
             ->when($request->search, function ($query, $search) {
@@ -119,40 +140,21 @@ class CustomerController extends Controller
             ->when($request->status, function ($query, $status) {
                 $query->where('status', $status);
             })
-            ->latest('updated_at')
-            ->paginate(10);
+            ->withMax('responses', 'created_at')
+            ->orderByDesc('responses_max_created_at')
+            ->paginate(10)
+            ->withQueryString();
+
+        // for add new inquiry
+        $warranties = Warranty::with(['product'])
+            ->whereUserId(Auth::user()->id)
+            ->get();
 
         return Inertia::render('Customer/Inquiries', [
             'inquiries' => $inquiries,
             'select' => InquiryStatusType::options(),
-            'filters' => $request->only(['search', 'status'])
-        ]);
-    }
-
-    public function products(Request $request): Response
-    {
-        $products = Product::query()
-            ->select(['id', 'name', 'category_id', 'product_image_url', 'warranty_duration', 'brand'])
-            ->with('category:id,name')
-            ->when($request->search, function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('brand', 'like', "%{$search}%");
-            })
-            ->latest()
-            ->paginate(10);
-            
-        return Inertia::render('Customer/Products', [
-            'products' => $products
-        ]);
-    }
-
-    public function productsReview(string $id): Response
-    {
-        $product = Product::with('category:name')
-            ->findOrFail($id);
-
-        return Inertia::render('Customer/Review', [
-            'product' => $product
+            'filters' => $request->only(['search', 'status']),
+            'warranties' => $warranties
         ]);
     }
 
@@ -216,6 +218,17 @@ class CustomerController extends Controller
                 'url' => route('warranty.show', $w->id)
             ]);
 
+        $productReviews = ProductReview::with('product')
+            ->whereUserId($userId)
+            ->get()
+            ->map(fn($review) => (object)[
+                'type' => 'success',
+                'date' => $review->created_at,
+                'title' => "Reviewed {$review->product->name}",
+                'description' => "You gave {$review->rating} stars: " . Str::limit($review->comment, 60),
+                'url' => route('product-reviews', $review->product_id)
+            ]);
+
         // refactor with paginator
         // merge the queries to loop it in the blade foreach
         $history = collect()
@@ -223,6 +236,7 @@ class CustomerController extends Controller
             ->concat($inquiries)
             ->concat($statusUpdates)
             ->concat($expiredWarranty)
+            ->concat($productReviews)
             ->sortByDesc('date')
             ->values();
 
@@ -231,9 +245,10 @@ class CustomerController extends Controller
         ]);
     }
 
-    public function show(string $id): Response
+    public function show(Request $request, string $id): Response
     {
         $userId = Auth::id();
+        $tab = $request->query('tab', 'records');
 
         // get the warranty info for the id
         // need resource
@@ -241,40 +256,68 @@ class CustomerController extends Controller
             ->whereUserId($userId)
             ->where('id', $id)
             ->firstOrFail();
-
-        $latestInquiry = $warranty->inquiries->last();
         // dd($warranty);
-
-        // check if this warranty does not have a inquiries for the ux
-        $containsInquiries = $warranty->inquiries->isNotEmpty();
 
         $history = WarrantyInquiries::with('user')->where('warranty_id', $warranty->id)->get();
         // use the temporary helper for message
         $messages = $this->inquiryMessages($warranty->inquiries);
 
+        // get the latest inquiry of this warranty
+        $latestInquiry = WarrantyInquiries::where('user_id', $userId)
+            ->where('warranty_id', $warranty->id)
+            ->latest()
+            ->first();
+
+        // get the inquiry where its not final or closed
+        $activeInquiry = WarrantyInquiries::where('user_id', $userId)
+            ->where('warranty_id', $warranty->id)
+            ->whereNotIn('status', [InquiryStatusType::RESOLVED, InquiryStatusType::CLOSED, InquiryStatusType::REPLACED,])
+            ->latest()
+            ->first();
+
+        // get the review of the product of the customer
+        $review = ProductReview::whereUserId($userId)
+            ->where('product_id', $warranty->product_id)
+            ->first();
+
         return Inertia::render('Customer/Show', [
             'warranty' => $warranty,
             'history' => $history,
-            'id' => $latestInquiry?->id,
             'messages' => $messages,
-            'containsInquiries' => $containsInquiries
+            'latestInquiry' => $latestInquiry,
+            'activeInquiry' => $activeInquiry,
+            'review' => $review,
+            'isExpired' => now()->greaterThan($warranty->expiry_date)
         ]);
     }
 
     /**
      * Show specific inquiry
      */
-    public function showInquiry(string $id): Response
+    public function showInquiry(Request $request, string $id): Response
     {
-        $inquiry = WarrantyInquiries::with(['warranty.product.category', 'warranty.user'])
-            ->whereUserId(Auth::user()->id)
-            ->where('id', $id)
-            ->firstOrFail();
+        $activeTab = $request->query('tab', 'messages');
 
-        // dd($inquiry);
+        $inquiry = WarrantyInquiries::with([
+            'warranty.product.category',
+            'user',
+            'responses.user'
+        ])
+            ->where('user_id', Auth::id())
+            ->findOrFail($id);
+
+        $messages = $this->inquiryMessages(collect([$inquiry]));
+
+        $status = $inquiry->status instanceof InquiryStatusType
+            ? $inquiry->status
+            : InquiryStatusType::from($inquiry->status);
+
+        $inquiry->is_done = $status->isFinal();
 
         return Inertia::render('Customer/Inquiry', [
-            'inquiry' => $inquiry
+            'inquiry' => $inquiry,
+            'messages' => $messages,
+            'activeTab' => $activeTab
         ]);
     }
 }

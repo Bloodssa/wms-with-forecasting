@@ -1,16 +1,59 @@
 <script setup>
 import Badge from '@/Components/Badge.vue';
 import CustomerLayout from '@/Layouts/CustomerLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { ArrowLeftToLine } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import Discussion from '@/Components/Discussion.vue';
+import BaseModal from '@/Components/Modals/BaseModal.vue';
 
 const props = defineProps({
     inquiry: {
         type: Object,
         default: () => ({})
+    },
+    messages: {
+        type: Array,
+        default: () => []
+    },
+    activeTab: {
+        type: String,
+        default: 'messages'
     }
 });
+
+const activeTab = computed(() => props.activeTab);
+const showCancelModal = ref(false);
+const cancelMessage = ref('');
+const loading = ref(false);
+
+const submitCancel = () => {
+    if (!cancelMessage.value.trim()) return;
+
+    loading.value = true;
+
+    router.patch(route('inquiry-cancel', props.inquiry.id), {
+        message: cancelMessage.value
+    }, {
+        preserveScroll: true,
+        onFinish: () => {
+            loading.value = false;
+            showCancelModal.value = false;
+            cancelMessage.value = '';
+        }
+    });
+};
+
+const switchTab = (tabName) => {
+    router.get(
+        route('inquiry.show', props.inquiry.id),
+        { tab: tabName },
+        {
+            preserveScroll: true,
+            replace: true
+        }
+    );
+};
 
 // days remaining
 const daysRemaining = computed(() => {
@@ -33,6 +76,18 @@ const formatDate = (dateString, format = 'long') => {
         hour: '2-digit', minute: '2-digit', hour12: true
     });
 };
+
+const isDone = computed(() => {
+    return ['resolved', 'replaced', 'closed'].includes(props.inquiry.status);
+});
+
+const lastResponse = computed(() => {
+    if (!props.messages?.length) return null;
+
+    return [...props.messages].sort(
+        (a, b) => new Date(a.created_at) - new Date(b.created_at)
+    ).at(-1);
+});
 </script>
 
 <template>
@@ -41,7 +96,8 @@ const formatDate = (dateString, format = 'long') => {
     <CustomerLayout>
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div class="flex items-center gap-3">
-                <Link :href="route('inquiries')" class="p-2 hover:bg-gray-100 rounded-full transition text-neutral-500">
+                <Link :href="route('inquiries')"
+                    class="p-3 bg-white rounded-md hover:bg-neutral-200 border border-gray-300">
                     <ArrowLeftToLine class="hover:text-neutral-900 transition duration-200" />
                 </Link>
                 <div>
@@ -53,16 +109,28 @@ const formatDate = (dateString, format = 'long') => {
                     </p>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
-                <Link :href="route('warranty.show', props.inquiry.warranty.id)"
-                    class="px-4 py-2 border border-gray-300 bg-neutral-900 text-white text-sm font-semibold rounded-md">
-                    View Chats
-                </Link>
+            <div class="flex mb-6 gap-2">
+                <div
+                    class="inline-flex w-full md:w-auto items-center p-1 space-x-2 bg-white border border-gray-300 rounded-md">
+                    <button @click="switchTab('messages')"
+                        :class="props.activeTab === 'messages' ? 'bg-neutral-900 text-white' : 'bg-white hover:text-neutral-700'"
+                        class="flex-1 font-semibold md:flex-none text-center px-4 py-2 text-sm rounded-md transition focus:outline-none select-none">
+                        Inquiry Messages
+                    </button>
+                    <button @click="switchTab('details')"
+                        :class="props.activeTab === 'details' ? 'bg-neutral-900 text-white' : 'bg-white hover:text-neutral-700'"
+                        class="flex-1 font-semibold md:flex-none text-center px-4 py-2 text-sm rounded-md transition focus:outline-none select-none">
+                        Inquiry Details
+                    </button>
+                </div>
             </div>
         </div>
+        <div v-if="activeTab === 'messages'">
+            <Discussion :inquiry-id="props.inquiry.id" :messages="props.messages" @cancel="showCancelModal = true"
+                :warranty="props.inquiry.warranty" :inquiry="props.inquiry" />
+        </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
+        <div v-if="activeTab === 'details'" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="lg:col-span-2 space-y-6">
                 <div class="bg-white border border-gray-300 rounded-md">
                     <div class="px-5 py-4 border-b border-gray-300">
@@ -108,20 +176,27 @@ const formatDate = (dateString, format = 'long') => {
                         </div>
                     </div>
                 </div>
-
-                <div v-if="props.inquiry.warranty?.resolved_message" class="bg-white border border-gray-300 rounded-md">
-                    <div class="px-5 py-4 border-b border-gray-300">
-                        <h2 class="text-neutral-900 font-semibold text-base">Resolution</h2>
-                    </div>
-                    <div class="p-5">
-                        <p class="text-neutral-900">{{ props.inquiry.warranty.resolved_message }}</p>
-                    </div>
+                <div v-if="isDone && lastResponse" class="bg-white border border-gray-300 rounded-md p-5">
+                    <h2 class="font-semibold text-base text-neutral-900 mb-3">
+                        Resolution
+                    </h2>
+                    <p class="text-neutral-900">
+                        {{ lastResponse.message }}
+                    </p>
+                    <p class="text-xs text-neutral-500 mt-2">
+                        Resolved at {{ formatDate(lastResponse.created_at) }}
+                    </p>
                 </div>
                 <div v-else class="bg-white border border-gray-300 rounded-md p-5 text-sm text-neutral-500">
-                    <p v-if="props.inquiry.status === 'pending'">Your inquiry has been received and is waiting for
-                        review.</p>
-                    <p v-else-if="props.inquiry.status === 'in_progress'">Your inquiry is currently being reviewed.</p>
-                    <p v-else>Awaiting for updates.</p>
+                    <p v-if="props.inquiry.status === 'pending'">
+                        Your inquiry has been received and is waiting for review.
+                    </p>
+                    <p v-else-if="props.inquiry.status === 'in_progress'">
+                        Your inquiry is currently being reviewed.
+                    </p>
+                    <p v-else>
+                        Awaiting for updates.
+                    </p>
                 </div>
             </div>
 
@@ -193,4 +268,24 @@ const formatDate = (dateString, format = 'long') => {
             </div>
         </div>
     </CustomerLayout>
-</template> 
+    <BaseModal :show="showCancelModal" @close="showCancelModal = false" title="Cancel Inquiry"
+        subtitle="Please provide a reason for cancelling">
+        <div class="space-y-4">
+
+            <textarea v-model="cancelMessage" class="w-full  input-border border border-nuetral-900 rounded-md p-3 text-sm" rows="4"
+                placeholder="Enter your reason why you cancel the inquiry"></textarea>
+
+            <div class="flex justify-end gap-2">
+                <button @click="showCancelModal = false"
+                    class="px-4 py-2 border border-gray-300 hover:bg-gray-50 rounded-md">
+                    Close
+                </button>
+                <button @click="submitCancel" :disabled="loading || !cancelMessage"
+                    class="px-4 py-2 bg-red-700 text-white rounded-md disabled:opacity-50">
+                    Confirm Cancel
+                </button>
+            </div>
+
+        </div>
+    </BaseModal>
+</template>

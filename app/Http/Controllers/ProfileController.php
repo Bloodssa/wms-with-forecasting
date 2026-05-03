@@ -7,8 +7,10 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
+use Illuminate\Validation\Rules;
 use Inertia\Response;
 
 class ProfileController extends Controller
@@ -21,6 +23,8 @@ class ProfileController extends Controller
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
+            'isLogInViaGmail' => (bool) Auth::user()->google_id,
+            'hasPassword' => Auth::user()->password !== null,
         ]);
     }
 
@@ -59,5 +63,25 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    public function setPassword(Request $request)
+    {
+        $data = $request->validate([
+            'password' => ['required', Rules\Password::defaults()],
+            'confirm_password' => ['required', 'same:password']
+        ]);
+
+        $user = $request->user();
+
+        // only allow the user if doesnt have pass
+        if ($user->password) {
+            return back()->with('error', 'You already have a password set.');
+        }
+
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        return back()->with('success', 'Password added successfully.');
     }
 }

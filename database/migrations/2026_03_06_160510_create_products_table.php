@@ -14,9 +14,11 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(Category::class)->nullable()->constrained()->nullOnDelete();
+            $table->foreignIdFor(Category::class)->nullable()->constrained()->nullOnDelete()->index();
             $table->string('name');
             $table->string('brand');
+            $table->text('description');
+            $table->decimal('price', 12, 2);
             $table->integer('warranty_duration'); // months
             $table->string('product_image_url');
             $table->string('service_center_name');

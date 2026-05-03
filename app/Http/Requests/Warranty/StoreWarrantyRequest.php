@@ -22,10 +22,24 @@ class StoreWarrantyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'email'],
-            'product_id' => ['required', 'exists:products,id'],
-            'serial_number' => ['required', 'string', 'unique:warranties,serial_number'],
-            'purchase_date' => ['required', 'date']
+            'claim_email' => ['required', 'email'],
+            'purchase_date' => ['required', 'date'],
+            'multiple_products' => ['required', 'array', 'min:1'],
+            'multiple_products.*.product_id' => [
+                'required',
+                'exists:products,id'
+            ],
+            'multiple_products.*.serial_number' => [
+                'required',
+                'string',
+                'distinct',
+                'unique:warranties,serial_number'
+            ],
+            'multiple_products.*.price' => [
+                'required',
+                'numeric',
+                'min:0'
+            ],
         ];
     }
 }

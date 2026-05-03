@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import ManagerLayout from '@/Layouts/ManagerLayout.vue';
 import TableSearch from '@/Components/Table/TableSearch.vue';
 import Table from '@/Components/Table/Table.vue';
@@ -10,7 +10,7 @@ import EmptyState from '@/Components/EmptyState.vue';
 defineProps({
     warrantyInquiries: {
         type: Object,
-        default: ()=> ({})
+        default: () => ({})
     },
     select: {
         type: Object,
@@ -19,25 +19,34 @@ defineProps({
 });
 
 const headers = ['Customer', 'Product / Issue', 'Serial Number', 'Status', 'Submitted'];
+
+const openInquiry = (id) => {
+    router.post(route('inquiry.mark-read', id), {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            router.visit(route('inquiry-action', { id }))
+        }
+    });
+};
 </script>
 
 <template>
+
     <Head title="Inquiries" />
     <ManagerLayout>
         <section class="lg:mt-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <article class="space-y-1">
                 <h1 class="text-neutral-900 text-[22px] lg:text-2xl capitalize font-bold">Warranty Inquiries</h1>
-                <p class="text-neutral-500 text-[13px] lg:text-sm">Review and manage technical support and repair requests from customers.</p>
+                <p class="text-neutral-500 text-[13px] lg:text-sm">Review and manage technical support and repair
+                    requests from customers.</p>
             </article>
         </section>
 
         <section>
             <div class="mt-6 bg-white border border-gray-300 rounded-md overflow-hidden">
-                <TableSearch 
-                    :select="select"
-                    :route="route('warranty-inquiries')"
-                />
-                <Table v-if="warrantyInquiries.data?.length > 0" :headers="headers" :datas="warrantyInquiries" :action="true">
+                <TableSearch :select="select" :route="route('warranty-inquiries')" />
+                <Table v-if="warrantyInquiries.data?.length > 0" :headers="headers" :datas="warrantyInquiries"
+                    :action="true">
                     <tr v-for="inquiry in warrantyInquiries.data" :key="inquiry.id">
                         <td class="table-text">
                             <div class="flex items-center space-x-2">
@@ -70,8 +79,13 @@ const headers = ['Customer', 'Product / Issue', 'Serial Number', 'Status', 'Subm
                             </span>
                         </td>
                         <td class="table-text text-right">
-                            <Link :href="route('inquiry-action', { id: inquiry.id })"
-                                class="px-4 py-2 text-white bg-neutral-900 rounded-md font-semibold">Respond</Link>
+                            <button @click="openInquiry(inquiry.id)"
+                                class="relative px-4 py-2 text-white bg-neutral-900 rounded-md font-semibold">Respond
+                                <span v-if="inquiry.unread_messages_count > 0"
+                                    class="absolute top-0 bg-red-500 text-white text-2xs px-2 py-0.5 rounded-full">
+                                    {{ inquiry.unread_messages_count > 9 ? '9+' : inquiry.unread_messages_count }}
+                                </span>
+                            </button>
                         </td>
                     </tr>
                 </Table>

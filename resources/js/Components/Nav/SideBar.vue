@@ -1,6 +1,6 @@
 <script setup>
 import { usePage } from '@inertiajs/vue3';
-import { onMounted, ref, onUnmounted } from 'vue';
+import { onMounted, ref, onUnmounted, computed } from 'vue';
 import SidebarLink from './SidebarLink.vue';
 import ApplicationLogo from '../Icons/ApplicationLogo.vue';
 import MarkLogo from '../Icons/MarkLogo.vue';
@@ -27,6 +27,8 @@ onUnmounted(() => {
 
 const page = usePage();
 const isUrl = (url) => page.url.startsWith(url);
+
+const can = computed(() => page.props.can ?? {});
 
 const inquiryPages = [
     'Manager/WarrantyInquiries',
@@ -72,7 +74,7 @@ const inquiryPages = [
                             Dashboard
                         </SidebarLink>
                     </li>
-                    <li>
+                    <li v-if="can.canRegisterWarranty">
                         <SidebarLink :href="route('register-warranty')" :active="page.component === 'Manager/Register'">
                             <svg fill="currentColor" viewBox="0 -960 960 960" class="w-5 h-5 transition-colors" :class="page.component === 'Manager/Register'
                                 ? 'text-neutral-900'
@@ -85,8 +87,8 @@ const inquiryPages = [
                     </li>
                     <li>
                         <SidebarLink :href="route('warranties')"
-                            :active="page.component === 'Manager/Warranties'">
-                            <svg fill="currentColor" viewBox="0 -960 960 960" class="w-5 h-5 transition-colors" :class="page.component === 'Manager/Warranties'
+                            :active="page.component === 'Manager/Warranties' || page.component === 'Manager/ShowWarranty'">
+                            <svg fill="currentColor" viewBox="0 -960 960 960" class="w-5 h-5 transition-colors" :class="page.component === 'Manager/Warranties' || page.component === 'Manager/ShowWarranty'
                                 ? 'text-neutral-900'
                                 : 'text-neutral-500 group-hover:text-neutral-900'">
                                 <path
@@ -114,8 +116,8 @@ const inquiryPages = [
 
                 <ul class="flex flex-col gap-1 -mt-2">
                     <li>
-                        <SidebarLink :href="route('products')" :active="page.component === 'Manager/Products'">
-                            <svg fill="currentColor" viewBox="0 -960 960 960" class="w-5 h-5 transition-colors" :class="page.component === 'Manager/Products'
+                        <SidebarLink :href="route('products')" :active="page.component === 'Manager/Products' || page.component === 'Manager/ShowProduct'">
+                            <svg fill="currentColor" viewBox="0 -960 960 960" class="w-5 h-5 transition-colors" :class="page.component === 'Manager/ShowProduct' || page.component === 'Manager/Products'
                                 ? 'text-neutral-900'
                                 : 'text-neutral-500 group-hover:text-neutral-900'">
                                 <path
@@ -149,10 +151,10 @@ const inquiryPages = [
                 </ul>
 
                 <hr class="my-3 border-gray-300">
-                <h3 class="mb-4 ml-2 text-md font-semibold text-neutral-900 text-[15px]">Administration</h3>
+                <h3 class="mb-4 ml-2 text-md font-semibold text-neutral-900 text-[15px]">{{ can.viewAdminArea ? 'Administration' : 'Settings' }}</h3>
 
                 <ul class="flex flex-col gap-1 -mt-2">
-                    <li>
+                    <li v-if="can.viewAdminArea">
                         <SidebarLink :href="route('staff-accounts')"
                             :active="page.component === 'Manager/StaffAccounts'">
                             <svg fill="currentColor" viewBox="0 -960 960 960" class="w-5 h-5 transition-colors" :class="page.component === 'Manager/StaffAccounts'

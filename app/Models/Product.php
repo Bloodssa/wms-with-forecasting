@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Product extends Model
 {
     protected $fillable = [
-        'name', 'category_id', 'brand', 
+        'name', 'category_id', 'brand','price', 'description',
         'warranty_duration', 'product_image_url', 
         'service_center_name', 'service_center_address'
     ];
@@ -33,5 +33,10 @@ class Product extends Model
     public function warranties(): HasMany
     {
         return $this->hasMany(Warranty::class);
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
     }
 }

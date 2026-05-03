@@ -45,7 +45,7 @@ class WarrantyStatusNotification extends Command
                     // update status // note if time is managable remove status in column refawctor ui also
                     $warranty->update(['status' => WarrantyStatusType::EXPIRED]);
 
-                    Mail::to($warranty->user->email)->queue(new WarrantyExpired($warranty));
+                    Mail::to($warranty->user->email)->send(new WarrantyExpired($warranty));
                 }
             });
 
@@ -58,7 +58,7 @@ class WarrantyStatusNotification extends Command
                 foreach ($warranties as $warranty) {
                     $warranty->update(['status' => WarrantyStatusType::NEAR_EXPIRY]);
 
-                    Mail::to($warranty->user->email)->queue(new WarrantyNearExpiry($warranty));
+                    Mail::to($warranty->user->email)->send(new WarrantyNearExpiry($warranty));
                 }
             });
 

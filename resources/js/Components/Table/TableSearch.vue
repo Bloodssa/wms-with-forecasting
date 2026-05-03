@@ -93,17 +93,15 @@ watch(selected, (value) => {
         </div>
 
         <!-- Filter -->
-        <div v-if="!dropdown" class="w-full flex items-center gap-2 md:w-auto">
+        <div v-if="!dropdown" class="w-full flex flex-col sm:flex-row items-center gap-2 md:w-auto">
             <select v-model="selected"
-                class="w-full rounded-md border-gray-300 text-sm focus:ring-neutral-900 focus:border-neutral-900">
+                class="input-border w-full rounded-md">
                 <option value="">All</option>
-
-                <option class="capitalize" v-for="(option, index) in select" :key="index"
-                    :value="option.value ?? option">
-                    {{ option.label ?? option }}
+                <option v-for="(option, index) in select" :key="index" :value="option.slug ?? option.value ?? option">
+                    {{ option.name ?? option.label ?? option }}
                 </option>
             </select>
-            <div class="flex-1 md:flex-none flex">
+            <div class="w-full sm:w-auto">
                 <slot />
             </div>
         </div>

@@ -31,6 +31,7 @@ class UpdateProductRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'category_id' => ['required', 'string'],
+            'description' => ['required', 'string', 'max:2000'],
             'brand' => ['required', 'string'],
             'warranty_duration' => ['required', 'integer', 'min:0', 'max:200'],
             'service_center_name' => ['required', 'string'],
