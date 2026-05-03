@@ -113,7 +113,7 @@ const page = usePage();
 const can = computed(() => page.props.can ?? {});
 // poll every five seconds
 usePoll(5000, {
-    only: ['messages', 'inquiry'],
+    only: ['messages', 'inquiry', 'flash'],
     preserveScroll: true,
 });
 </script>
@@ -207,7 +207,7 @@ usePoll(5000, {
                                 subtitle="This action requires technician explanation" size="md" @close="closeModal">
                                 <div class="space-y-4">
 
-                                    <textarea v-model="resolutionMessage" class="w-full border rounded-md p-3 text-sm"
+                                    <textarea v-model="resolutionMessage" class="input-border border-gray-300 focus:neutral-900 w-full border rounded-md p-3 text-sm"
                                         rows="5" placeholder="Explain what was done..."></textarea>
 
                                     <div class="flex justify-end gap-2">

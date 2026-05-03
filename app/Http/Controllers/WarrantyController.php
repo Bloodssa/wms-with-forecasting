@@ -143,7 +143,7 @@ class WarrantyController extends Controller
         $user = null;
 
         // create multiple warranties
-        DB::transaction(function () use ($data) {
+        DB::transaction(function () use ($data, &$user, &$createdWarranties) {
             $user = User::where('email', $data['claim_email'])->first(); // find customer if it exists
 
             $createdWarranties = []; // init created warrabties to pass in the mail
@@ -174,14 +174,14 @@ class WarrantyController extends Controller
         Log::info('User Warranty Send mail: ' . $data['claim_email']); // incase mail expired
         // send email if user not registered
         if (! $user) {
-            $wararanties = Warranty::with('product')
+            $warranties = Warranty::with('product')
                 ->whereIn('id', $createdWarranties) // send id to get all the warranties stored
                 ->get();
 
             $registrationLink = URL::temporarySignedRoute('customer.claim', now()->addDays(60), ['email' => $data['claim_email']]);
 
             Mail::to($data['claim_email'])->send(new WarrantyInvitation(
-                $wararanties,
+                $warranties,
                 $data['claim_email'],
                 $registrationLink
             ));
@@ -225,24 +225,32 @@ class WarrantyController extends Controller
 
         // broadcast(new InquiryResponseSent($inquiries))->toOthers();
 
-        return back()->with('success', 'Inquiry Response Submitted');
+        return back();
     }
 
     // mark as read messages
     public function markRead(string $id)
     {
-        // update all the inquiries read at
-        InquiryResponse::where('warranty_inquiries_id', $id)
-            ->whereNull('read_at')
-            ->where('user_id', '!=', Auth::user()->id)
-            ->update([
-                'read_at' => now()
-            ]);
+        $userId = Auth::id();
 
-        WarrantyInquiries::where('id', $id)
-            ->update([
-                'read_at' => now()
-            ]);
+        $unreadExists = InquiryResponse::where('warranty_inquiries_id', $id)
+            ->whereNull('read_at')
+            ->where('user_id', '!=', $userId)
+            ->exists();
+
+        if ($unreadExists) {
+            InquiryResponse::where('warranty_inquiries_id', $id)
+                ->whereNull('read_at')
+                ->where('user_id', '!=', $userId)
+                ->update([
+                    'read_at' => now()
+                ]);
+
+            WarrantyInquiries::where('id', $id)
+                ->update([
+                    'read_at' => now()
+                ]);
+        }
 
         return back();
     }

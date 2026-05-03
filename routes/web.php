@@ -11,11 +11,11 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 // use App\Mail\WarrantyInvitation;
-// use App\Mail\WarrantyNearExpiry;
-// use App\Mail\WarrantyExpired;
+// // use App\Mail\WarrantyNearExpiry;
+// // use App\Mail\WarrantyExpired;
 // use App\Models\Warranty;
 
-// // Route to view the email that will be sent to the user
+// // // Route to view the email that will be sent to the user
 // Route::get('/preview-mail', function () {
 
 //     $warranty = Warranty::whereNotNull('user_id')->get();

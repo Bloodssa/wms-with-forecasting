@@ -117,7 +117,7 @@ const formatDate = (date) => {
             <div>
                 <InputLabel for="name" value="Name" />
 
-                <TextInput id="name" type="text" class="mt-1 block w-full" v-model="form.name" autofocus
+                <TextInput placeholder="John Doe" id="name" type="text" class="mt-1 block w-full" v-model="form.name" autofocus
                     autocomplete="name" />
 
                 <InputError class="mt-2" :message="form.errors.name" />
@@ -126,7 +126,7 @@ const formatDate = (date) => {
             <div class="mt-4">
                 <InputLabel for="email" value="Email" />
 
-                <TextInput id="email" type="email" class="mt-1 block w-full" v-model="form.email"
+                <TextInput placeholder="jdoe@gmail.com"  id="email" type="email" class="mt-1 block w-full" v-model="form.email"
                     autocomplete="username" />
 
                 <InputError class="mt-2" :message="form.errors.email" />
@@ -135,7 +135,7 @@ const formatDate = (date) => {
             <div class="mt-4">
                 <InputLabel for="password" value="Password" />
 
-                <TextInput id="password" type="password" class="mt-1 block w-full" v-model="form.password"
+                <TextInput placeholder="********"  id="password" type="password" class="mt-1 block w-full" v-model="form.password"
                     autocomplete="new-password" />
 
                 <InputError class="mt-2" :message="form.errors.password" />
@@ -144,7 +144,7 @@ const formatDate = (date) => {
             <div class="mt-4">
                 <InputLabel for="password_confirmation" value="Confirm Password" />
 
-                <TextInput id="password_confirmation" type="password" class="mt-1 block w-full"
+                <TextInput placeholder="********" id="password_confirmation" type="password" class="mt-1 block w-full"
                     v-model="form.password_confirmation" autocomplete="new-password" />
 
                 <InputError class="mt-2" :message="form.errors.password_confirmation" />

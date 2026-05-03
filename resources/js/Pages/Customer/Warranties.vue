@@ -117,7 +117,7 @@ const formatDate = (date) => {
             </div>
         </div>
         <h1 class="my-5 font-semibold text-gray-900">Warranties</h1>
-        <div class="border border-gray-300 rounded-md overflow-hidden bg-white">
+        <div class="hidden md:block border border-gray-300 rounded-md overflow-hidden bg-white">
             <table class="w-full border-collapse">
                 <tbody class="divide-y divide-gray-300">
                     <tr v-if="warranties.data.length" v-for="warranty in warranties.data" :key="warranty.id"
@@ -181,6 +181,55 @@ const formatDate = (date) => {
             </table>
             <div v-if="warranties.links.length > 3" class="px-3 py-4 w-full border-t border-gray-300">
                 <Pagination :links="warranties.links" />
+            </div>
+        </div>
+        <div class="md:hidden space-y-3">
+            <div v-for="warranty in warranties.data" :key="warranty.id" @click="goTo(warranty.id)"
+                class="border border-gray-300 rounded-md bg-white p-4 cursor-pointer active:bg-gray-50">
+                <div class="flex gap-4 min-w-0">
+                    <img :src="warranty.product.image_url" :alt="warranty.product.name"
+                        class="w-16 h-16 rounded-md object-cover border border-gray-300 shrink-0" />
+                    <div class="min-w-0 flex-1 space-y-1">
+                        <p class="text-sm font-semibold text-neutral-900 truncate">
+                            {{ warranty.product.name }}
+                        </p>
+                        <p class="text-xs text-neutral-500 truncate">
+                            Serial: {{ warranty.serial_number }}
+                        </p>
+                        <p class="text-xs text-neutral-500 truncate">
+                            {{ warranty.product.category.name }}
+                        </p>
+                    </div>
+                    <div class="shrink-0">
+                        <Badge size="sm" :type="warranty.status">
+                            {{ warranty.status }}
+                        </Badge>
+                    </div>
+                </div>
+                <div class="border-t border-gray-300 my-3"></div>
+                <div class="flex justify-between text-xs">
+                    <div class="space-y-1">
+                        <p class="text-neutral-500">Purchased</p>
+                        <p class="text-neutral-900 font-medium">
+                            {{ formatDate(warranty.purchase_date) }}
+                        </p>
+                    </div>
+                    <div class="text-right space-y-1">
+                        <p class="text-neutral-500">
+                            {{ isExpired(warranty.expiry_date) ? 'Expired' : 'Expires In' }}
+                        </p>
+                        <p class="font-semibold" :class="isExpired(warranty.expiry_date)
+                            ? 'text-rose-700'
+                            : 'text-neutral-900'">
+                            <template v-if="isExpired(warranty.expiry_date)">
+                                {{ formatDate(warranty.expiry_date) }}
+                            </template>
+                            <template v-else>
+                                {{ daysLeft(warranty.expiry_date) }} days
+                            </template>
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     </CustomerLayout>

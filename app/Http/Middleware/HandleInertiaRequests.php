@@ -32,13 +32,6 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
-        $can = [];
-
-        if ($user && str_contains($request->route()?->getActionName() ?? '', 'Manager')) {
-            $can = [
-                'inquiries' => []
-            ];
-        }
 
         return [
             ...parent::share($request),
@@ -57,12 +50,14 @@ class HandleInertiaRequests extends Middleware
                     'viewInquiryOnly' => $user->can('view-inquiry-only')
                 ];
             },
-            'flash' => [
-                'success' => session('success'),
-                'error' => session('error'),
-                'warning' => session('warning'),
-                'timestamp' => microtime(),
-            ],
+            'flash' => function () {
+                return [
+                    'success' => session('success'),
+                    'error' => session('error'),
+                    'warning' => session('warning'),
+                    'timestamp' => microtime(),
+                ];
+            },
             // notification for customers
             'notifications' => function () use ($request) {
                 $user = $request->user();

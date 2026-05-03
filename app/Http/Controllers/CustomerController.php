@@ -127,6 +127,7 @@ class CustomerController extends Controller
                 }
             ])
             ->whereUserId(Auth::user()->id)
+            ->whereIn('status', [InquiryStatusType::OPEN, InquiryStatusType::PENDING, InquiryStatusType::IN_PROGRESS])
             ->when($request->search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->whereHas('warranty', function ($q1) use ($search) {
@@ -152,7 +153,7 @@ class CustomerController extends Controller
 
         return Inertia::render('Customer/Inquiries', [
             'inquiries' => $inquiries,
-            'select' => InquiryStatusType::options(),
+            'select' => InquiryStatusType::activeOptions(),
             'filters' => $request->only(['search', 'status']),
             'warranties' => $warranties
         ]);

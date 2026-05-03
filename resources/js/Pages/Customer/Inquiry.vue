@@ -90,7 +90,7 @@ const lastResponse = computed(() => {
 });
 
 usePoll(5000, {
-    only: ['messages', 'inquiry'],
+    only: ['messages', 'inquiry', 'flash'],
     preserveScroll: true,
 });
 </script>

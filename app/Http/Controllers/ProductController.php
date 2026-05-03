@@ -260,7 +260,7 @@ class ProductController extends Controller
                 });
             })
             ->latest()
-            ->paginate(10);
+            ->get();
 
         return Inertia::render('Customer/Products', [
             'products' => $products,

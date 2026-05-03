@@ -54,9 +54,9 @@ const { filters } = useSearchFilter('view-products', props.filters);
             </div>
         </div>
 
-        <div v-if="props.products.data.length"
+        <div v-if="props.products.length"
             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                <div v-for="product in props.products.data" :key="product.id" class="bg-white border border-gray-300 rounded-md">
+                <div v-for="product in props.products" :key="product.id" class="bg-white border border-gray-300 rounded-md">
                     <ProductCard :product="product" />
                 </div>
         </div>

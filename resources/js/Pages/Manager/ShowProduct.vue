@@ -173,35 +173,15 @@ const handleHide = () => {
                 <h2 class="text-lg font-bold text-neutral-900">Product Ratings</h2>
             </div>
                 <div class="px-6 py-5">
-                    <div class="flex flex-col md:flex-row items-center gap-10 bg-neutral-50 p-6 rounded-md border border-neutral-300">
-                    <div class="text-center md:border-r border-gray-300 md:pr-10">
+                    <div class="flex flex-col md:flex-row items-center justify-center gap-10 bg-neutral-50 p-6 rounded-md border border-neutral-300">
+                    <div class="text-center md:pr-10">
                         <p class="text-5xl font-black text-neutral-900">{{ props.ratingStats.average }}</p>
-                        <div class="flex justify-center gap-1 my-2">
+                        <div class="flex justify-center items-center gap-1 my-2">
                             <Star v-for="i in 5" :key="i"
                                 :class="['w-5 h-5', i <= Math.round(props.ratingStats.average) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200']" />
                         </div>
                         <p class="text-xs font-bold text-neutral-500 uppercase">{{ props.ratingStats.total }} Ratings
                         </p>
-                    </div>
-
-                    <div class="flex-1 space-y-4 w-full">
-                        <span class="text-xs font-bold text-neutral-500 uppercase tracking-tighter">Filter by
-                            Rating</span>
-                        <div class="flex flex-wrap gap-2">
-                            <button @click="selectedStar = 'all'" :class="selectedStar === 'all'
-                                ? 'bg-neutral-900 text-white border-neutral-900'
-                                : 'bg-white text-neutral-700 border-gray-300'"
-                                class="px-4 py-1.5 rounded-md border text-[11px] font-bold">
-                                All
-                            </button>
-
-                            <button v-for="star in [5, 4, 3, 2, 1]" :key="star" @click="selectedStar = star" :class="selectedStar === star
-                                ? 'bg-neutral-900 text-white border-neutral-900'
-                                : 'bg-white text-neutral-700 border-gray-300'"
-                                class="px-4 py-1.5 rounded-md border text-[11px] font-bold hover:border-neutral-900">
-                                {{ star }} Star
-                            </button>
-                        </div>
                     </div>
                 </div>
                 <div v-if="props.product.reviews.length" class="mt-4 divide-y divide-gray-300">

@@ -14,6 +14,8 @@ defineProps({
 
 <template>
     <GuestLayout title="Products" :canLogin="canLogin" :canRegister="canRegister">
-    
+        <section class="relative min-h-[90vh] md:min-h-[70vh] flex flex-col items-center justify-center bg-white border-b border-gray-300 overflow-hidden">
+
+        </section>
     </GuestLayout>
 </template>

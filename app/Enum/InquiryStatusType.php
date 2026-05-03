@@ -16,13 +16,24 @@ enum InquiryStatusType: string
         return ucfirst($this->value);
     }
 
-     public function isFinal(): bool
+    public function isFinal(): bool
     {
         return in_array($this, [
             self::RESOLVED,
             self::REPLACED,
             self::CLOSED,
         ]);
+    }
+
+    public static function activeOptions(): array
+    {
+        return collect([
+            self::OPEN,
+            self::PENDING,
+            self::IN_PROGRESS,
+        ])->mapWithKeys(fn($case) => [
+            $case->value => $case->label()
+        ])->toArray();
     }
 
     public function priority(): int
