@@ -1,7 +1,7 @@
 <script setup>
 import Badge from '@/Components/Badge.vue';
 import CustomerLayout from '@/Layouts/CustomerLayout.vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePoll } from '@inertiajs/vue3';
 import { ArrowLeftToLine } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import Discussion from '@/Components/Discussion.vue';
@@ -87,6 +87,11 @@ const lastResponse = computed(() => {
     return [...props.messages].sort(
         (a, b) => new Date(a.created_at) - new Date(b.created_at)
     ).at(-1);
+});
+
+usePoll(5000, {
+    only: ['messages', 'inquiry'],
+    preserveScroll: true,
 });
 </script>
 

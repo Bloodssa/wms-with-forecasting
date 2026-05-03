@@ -16,33 +16,33 @@ const props = defineProps({
 });
 
 // broadcast init
-const allMessages = ref([...props.messages]);
+// const allMessages = ref([...props.messages]);
 
-// sync the props if failed in echo
-watch(() => props.messages, (newVal) => {
-    allMessages.value = newVal;
-}, { deep: true });
+// // sync the props if failed in echo
+// watch(() => props.messages, (newVal) => {
+//     allMessages.value = newVal;
+// }, { deep: true });
 
-onMounted(() => {
-    window.Echo.private(`inquiry.${props.inquiryId}`)
-        .listen('.ResponseSent', (e) => {
-            // check message already exists to prevent duplicates
-            const exists = allMessages.value.some(m => m.id === e.response.id);
-            if (!exists) {
-                allMessages.value.push(e.response);
-                // scrollToBottom();
-            }
-        })
-        .listen('.InquiryUpdated', (e) => { // If you have a status update event
-            allMessages.value.push(e.update);
-            scrollToBottom();
-        });
-});
+// onMounted(() => {
+//     window.Echo.private(`inquiry.${props.inquiryId}`)
+//         .listen('.ResponseSent', (e) => {
+//             // check message already exists to prevent duplicates
+//             const exists = allMessages.value.some(m => m.id === e.response.id);
+//             if (!exists) {
+//                 allMessages.value.push(e.response);
+//                 // scrollToBottom();
+//             }
+//         })
+//         .listen('.InquiryUpdated', (e) => { // If you have a status update event
+//             allMessages.value.push(e.update);
+//             scrollToBottom();
+//         });
+// });
 
-// remove chanell
-onUnmounted(() => {
-    window.Echo.leave(`inquiry.${props.inquiryId}`);
-});
+// // remove chanell
+// onUnmounted(() => {
+//     window.Echo.leave(`inquiry.${props.inquiryId}`);
+// });
 
 const currentTime = ref(dayjs());
 let timer = null;
@@ -114,7 +114,7 @@ const handleHide = () => {
 
 <template>
     <div ref="chatContainer" class="flex-1 overflow-y-auto p-5 space-y-4 bg-white scroll-smooth">
-        <div v-for="msg in allMessages" :key="msg.id">
+        <div v-for="msg in messages" :key="msg.id">
 
             <div v-if="msg.type === 'updates'" class="relative flex items-center justify-center my-8">
                 <div class="absolute inset-0 flex items-center">

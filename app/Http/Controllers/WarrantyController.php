@@ -223,7 +223,7 @@ class WarrantyController extends Controller
         // when the tech or customer reply to the inquiry update the updated_at in the WarrantyInquiry
         // $inquiries->warrantyInquiries->touch();
 
-        broadcast(new InquiryResponseSent($inquiries))->toOthers();
+        // broadcast(new InquiryResponseSent($inquiries))->toOthers();
 
         return back()->with('success', 'Inquiry Response Submitted');
     }
@@ -277,7 +277,7 @@ class WarrantyController extends Controller
             'type' => $type
         ]);
 
-        broadcast(new InquiryResponseSent($response))->toOthers();
+        // broadcast(new InquiryResponseSent($response))->toOthers();
 
         return back()->with('success', 'Inquiry status updated successfully!');
     }

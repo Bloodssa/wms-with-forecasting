@@ -112,10 +112,10 @@ const isDone = computed(() => Boolean(props.inquiry.is_done));
 const page = usePage();
 const can = computed(() => page.props.can ?? {});
 // poll every five seconds
-// usePoll(5000, {
-//     only: ['messages', 'inquiry'],
-//     preserveScroll: true,
-// });
+usePoll(5000, {
+    only: ['messages', 'inquiry'],
+    preserveScroll: true,
+});
 </script>
 
 <template>
