@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import CustomerLayout from '@/Layouts/CustomerLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { Filter, Search, EllipsisVertical } from 'lucide-vue-next';
@@ -8,6 +8,7 @@ import dayjs from 'dayjs';
 import Badge from '@/Components/Badge.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import Pagination from '@/Components/Pagination.vue';
+import useCountdown from '@/composables/useCountDown';
 
 const props = defineProps({
     warranties: {
@@ -77,10 +78,6 @@ const goTo = (id) => {
     router.visit(route('warranty.show', id))
 }
 
-const isExpired = (date) => {
-    return dayjs(date).isBefore(dayjs())
-}
-
 const daysLeft = (date) => {
     return dayjs(date).diff(dayjs(), 'day')
 }
@@ -88,6 +85,8 @@ const daysLeft = (date) => {
 const formatDate = (date) => {
     return dayjs(date).format('MMM DD, YYYY')
 }
+
+const { timeLeft, isExpired } = useCountdown();
 </script>
 
 <template>
@@ -161,7 +160,7 @@ const formatDate = (date) => {
                                         Expires In
                                     </p>
                                     <p class="text-sm font-semibold text-neutral-900 whitespace-nowrap">
-                                        {{ daysLeft(warranty.expiry_date) }} days
+                                        {{ timeLeft(warranty.expiry_date) }}
                                     </p>
                                 </template>
                             </div>

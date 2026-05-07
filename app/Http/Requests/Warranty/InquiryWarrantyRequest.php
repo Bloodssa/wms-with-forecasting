@@ -25,7 +25,7 @@ class InquiryWarrantyRequest extends FormRequest
             'warranty_id' => ['required', 'numeric', 'exists:warranties,id'],
             'message' => ['required', 'string'],
             'attachments' => ['nullable', 'array', 'max:10'],
-            'attachments.*' => ['image', 'mimes:jpeg,png,jpg,webp', 'max:10240'],
+            'attachments.*' => ['image', 'mimes:jpeg,png,jpg,webp,mp4,mov,avi,webm', 'max:5120'],
         ];
     }
 
@@ -35,7 +35,7 @@ class InquiryWarrantyRequest extends FormRequest
             'attachments.max' => 'You are only allowed to upload a maximum of 10 images.',
             'attachments.*.image' => 'Each file must be an image.',
             'attachments.*.mimes' => 'Only jpeg, png, jpg, webp formats are allowed.',
-            'attachments.*.max' => 'Each image must not exceed 10MB.',
+            'attachments.*.max' => 'Each image must not exceed 5MB.',
             'attachments.*.uploaded' => 'File #:position failed to upload. The file might be too large.',
         ];
     }

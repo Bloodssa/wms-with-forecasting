@@ -164,8 +164,10 @@ const handleHide = () => {
                 <h2 class="text-lg font-bold text-neutral-900">Product Description</h2>
             </div>
 
-            <div class="px-5 py-4">
-                <p>{{ props.product.description }}</p>
+            <div class="px-5 py-6">
+                <p class="whitespace-pre-wrap text-sm text-neutral-700 leading-relaxed tracking-wide">
+                    {{ props.product.description }}
+                </p>
             </div>
         </div>
         <div class="bg-white border border-gray-300 rounded-md">

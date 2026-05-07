@@ -484,7 +484,7 @@ class ManagerController extends Controller
                 'resolvedInquiry' => WarrantyInquiries::whereIn('status', [InquiryStatusType::RESOLVED, InquiryStatusType::REPLACED])->where('created_at', '>=', $interval)->count(),
             ],
             'chartsData' => $datas,
-            'nearExpiryWarranties' => Warranty::with('user', 'product')->where('status', 'near-expiry')->orderBy('created_at', 'desc')->get(),
+            'nearExpiryWarranties' => Warranty::with('user', 'product')->where('status', WarrantyStatusType::NEAR_EXPIRY)->orderBy('created_at', 'desc')->get(),
             'selectedPeriod' => $period,
             'periodLabel' => $periodLabel
         ];

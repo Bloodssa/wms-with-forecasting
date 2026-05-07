@@ -1,14 +1,11 @@
 <script setup>
 import dayjs from 'dayjs';
 import Badge from './Badge.vue';
+import useCountdown from '@/composables/useCountDown';
 
 const props = defineProps({
     warranty: Object
 });
-
-const isExpired = (date) => {
-    return dayjs(date).isBefore(dayjs(), 'day')
-}
 
 const daysLeft = (date) => {
     return dayjs(date).diff(dayjs(), 'day')
@@ -17,6 +14,9 @@ const daysLeft = (date) => {
 const formatDate = (date) => {
     return dayjs(date).format('MMM DD, YYYY');
 }
+
+
+const { timeLeft, isExpired } = useCountdown();
 </script>
 
 <template>
@@ -87,7 +87,7 @@ const formatDate = (date) => {
                             <template v-else>
                                 <!-- <CircleBadge :type="warranty.status" size="lg" /> -->
                                 <p class="text-md text-neutral-900 font-semibold">
-                                    {{ daysLeft(warranty.expiry_date) }} Days Left
+                                    {{ timeLeft(warranty.expiry_date) }} Days Left
                                 </p>
                             </template>
                         </div>

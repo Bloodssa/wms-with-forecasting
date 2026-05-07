@@ -10,4 +10,4 @@ Artisan::command('inspire', function () {
 
 
 // schedule command for sending email for upcoming and expire warranties
-Schedule::command('warranty:status-notification')->hourly();
+Schedule::command('warranty:status-notification')->everyMinute();

@@ -6,6 +6,7 @@ import { ArrowLeftToLine } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import Discussion from '@/Components/Discussion.vue';
 import BaseModal from '@/Components/Modals/BaseModal.vue';
+import useCountdown from '@/composables/useCountDown';
 
 const props = defineProps({
     inquiry: {
@@ -89,10 +90,12 @@ const lastResponse = computed(() => {
     ).at(-1);
 });
 
-usePoll(5000, {
-    only: ['messages', 'inquiry', 'flash'],
-    preserveScroll: true,
-});
+
+const { timeLeft, isExpired } = useCountdown();
+// usePoll(5000, {
+//     only: ['messages', 'inquiry', 'flash'],
+//     preserveScroll: true,
+// });
 </script>
 
 <template>
@@ -257,7 +260,7 @@ usePoll(5000, {
                             <div v-if="props.inquiry.warranty.expiry_date" class="flex items-center space-x-1">
                                 <p :class="daysRemaining < 0 ? 'text-red-800' : 'text-neutral-500'"
                                     class="text-md font-medium">
-                                    {{ daysRemaining < 0 ? 'Expired' : `${daysRemaining} days remaining` }} </p>
+                                {{ timeLeft(props.inquiry.warranty.expiry_date) }} left</p>
                             </div>
                         </div>
                     </div>

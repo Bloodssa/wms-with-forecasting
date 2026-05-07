@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enum\InquiryResponseType;
 use App\Enum\InquiryStatusType;
+use App\Enum\UserRole;
 use App\Enum\WarrantyStatusType;
 use App\Events\InquiryResponseSent;
 use App\Http\Requests\Warranty\InquiryWarrantyRequest;
@@ -23,9 +24,39 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Redirect;
 
 class WarrantyController extends Controller
 {
+    public function updateWarranty(Request $request, Warranty $warranty)
+    {
+        if (Auth::user()->role !== UserRole::ADMIN) {
+            return Redirect::back()->with('error', 'Only admins can update warranties.');
+        }
+
+        $validated = $request->validate([
+            'serial_number' => 'required|string|max:255|unique:warranties,serial_number,' . $warranty->id,
+            'purchase_date' => 'required|date',
+            'expiry_date'   => 'required|date|after_or_equal:purchase_date',
+            'status'        => 'required|in:active,pending,near-expiry,expired',
+        ]);
+
+        $warranty->update($validated);
+
+        return Redirect::back()->with('success', 'Warranty updated successfully.');
+    }
+
+    public function destroyWarranty(Warranty $warranty)
+    {
+        if (Auth::user()->role !== UserRole::ADMIN) {
+            return Redirect::back()->with('error', 'Only admins can update warranties.');
+        }
+        
+        $warranty->delete();
+
+        return Redirect::back()->with('success', 'Warranty deleted successfully.');
+    }
+
     public function inquire(InquiryWarrantyRequest $request)
     {
         $data = $request->validated();
@@ -223,7 +254,7 @@ class WarrantyController extends Controller
         // when the tech or customer reply to the inquiry update the updated_at in the WarrantyInquiry
         // $inquiries->warrantyInquiries->touch();
 
-        // broadcast(new InquiryResponseSent($inquiries))->toOthers();
+        broadcast(new InquiryResponseSent($inquiries))->toOthers();
 
         return back();
     }
@@ -285,7 +316,7 @@ class WarrantyController extends Controller
             'type' => $type
         ]);
 
-        // broadcast(new InquiryResponseSent($response))->toOthers();
+        broadcast(new InquiryResponseSent($response))->toOthers();
 
         return back()->with('success', 'Inquiry status updated successfully!');
     }

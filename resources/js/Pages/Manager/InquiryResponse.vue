@@ -11,6 +11,7 @@ import InputLabel from '@/Components/Forms/InputLabel.vue';
 import Badge from '@/Components/Badge.vue';
 import dayjs from 'dayjs';
 import BaseModal from '@/Components/Modals/BaseModal.vue';
+import useCountdown from '@/composables/useCountDown';
 
 const props = defineProps({
     inquiry: {
@@ -83,10 +84,28 @@ const sendStatusUpdate = () => {
 };
 
 // days remaining before expiry use created from inquiry and expiry since expiry date is immutable
-const daysRemainingAtSubmission = dayjs(props.inquiry.warranty.expiry_date).diff(dayjs(props.inquiry.created_at), 'day');
+const timeLeftAtSubmission = computed(() => {
+    const expiry = dayjs(props.inquiry.warranty.expiry_date);
+    const now = dayjs();
+
+    const diffDays = expiry.diff(now, 'day');
+    const diffHours = expiry.diff(now, 'hour');
+
+    if (diffHours <= 0) return 'Expired';
+
+    if (diffDays >= 1) {
+        return `${diffDays} day${diffDays > 1 ? 's' : ''} left`;
+    }
+
+    return `${diffHours} hour${diffHours > 1 ? 's' : ''} left`;
+});
 
 // check if its covered during submission
-const wasCovered = daysRemainingAtSubmission >= 0;
+const wasCovered = computed(() => {
+    return daysRemainingAtSubmission.value >= 0;
+});
+
+const { now, timeLeft } = useCountdown();
 
 // status for options in updae
 const statusFlow = [
@@ -112,10 +131,10 @@ const isDone = computed(() => Boolean(props.inquiry.is_done));
 const page = usePage();
 const can = computed(() => page.props.can ?? {});
 // poll every five seconds
-usePoll(5000, {
-    only: ['messages', 'inquiry', 'flash'],
-    preserveScroll: true,
-});
+// usePoll(5000, {
+//     only: ['messages', 'inquiry', 'flash'],
+//     preserveScroll: true,
+// });
 </script>
 
 <template>
@@ -174,20 +193,9 @@ usePoll(5000, {
                                 Update Progress
                             </h1>
                         </div>
-                        <div :class="[
-                            'px-5 py-3 border-b border-gray-300 text-sm font-medium',
-                            wasCovered ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
-                        ]">
-                            <template v-if="wasCovered">
-                                Inquired <span class="font-bold">{{ daysRemainingAtSubmission }} days</span> before
-                                warranty expiry.
-                                <span class="block text-xs font-normal opacity-80">(Valid Coverage)</span>
-                            </template>
-                            <template v-else>
-                                Inquired <span class="font-bold">{{ Math.abs(daysRemainingAtSubmission) }} days</span>
-                                after warranty expiry.
-                                <span class="block text-xs font-normal opacity-80">(Expired Coverage)</span>
-                            </template>
+                        <div class="px-5 py-3 border-b border-gray-300 text-sm font-medium bg-gray-50 text-gray-800">
+                            Warranty had <span class="font-bold">{{ timeLeftAtSubmission }}</span> left at the time of
+                            inquiry submission.
                         </div>
                         <form @submit.prevent="submitStatus" class="space-y-4 p-5">
                             <div>
@@ -207,7 +215,8 @@ usePoll(5000, {
                                 subtitle="This action requires technician explanation" size="md" @close="closeModal">
                                 <div class="space-y-4">
 
-                                    <textarea v-model="resolutionMessage" class="input-border border-gray-300 focus:neutral-900 w-full border rounded-md p-3 text-sm"
+                                    <textarea v-model="resolutionMessage"
+                                        class="input-border border-gray-300 focus:neutral-900 w-full border rounded-md p-3 text-sm"
                                         rows="5" placeholder="Explain what was done..."></textarea>
 
                                     <div class="flex justify-end gap-2">
@@ -299,8 +308,7 @@ usePoll(5000, {
                                             Expired
                                         </template>
                                         <template v-else>
-                                            {{ dayjs(props.inquiry.warranty.expiry_date).diff(dayjs(), 'day') }} days
-                                            remaining
+                                            {{ timeLeft(props.inquiry.warranty.expiry_date) }} Left
                                         </template>
                                     </p>
                                 </div>

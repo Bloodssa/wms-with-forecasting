@@ -34,14 +34,12 @@ Route::middleware('guest')->group(function () {
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
     ]));
-    Route::get('/products   ', fn() => Inertia::render('Products', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-    ]));
-    Route::get('/faq', fn() => Inertia::render('Faq', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-    ]));
+    Route::get('/products', [ProductController::class, 'landingPageProducts'])->name('landing.products');
+    Route::get('/products/details/{id}', [ProductController::class, 'landingPageProductsDetails'])->name('landing.details');
+    // Route::get('/faq', fn() => Inertia::render('Faq', [
+    //     'canLogin' => Route::has('login'),
+    //     'canRegister' => Route::has('register'),
+    // ]));
 
     // Google OAuth Route
     Route::get('/auth/google', [SocialiteController::class, 'googleLogin'])->name('auth.google');
@@ -91,6 +89,8 @@ Route::middleware('auth', 'manager')->group(function() {
     Route::post('/response', [WarrantyController::class, 'response'])->name('response');
     Route::patch('/warranty-status/{id}', [WarrantyController::class, 'update'])->name('inquiry-status');
     Route::post('/create-employee', [ManagerController::class, 'store'])->name('create-employee');
+    Route::put('/warranties/{warranty}', [WarrantyController::class, 'updateWarranty'])->name('warranties.update');
+    Route::delete('/warranties/{warranty}', [WarrantyController::class, 'destroyWarranty'])->name('warranties.destroy');
 
     // products
     Route::get('/manage-products', [ProductController::class, 'index'])->name('products');

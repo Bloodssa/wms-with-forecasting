@@ -131,8 +131,8 @@ const daysLeft = (date) => {
                     Warranty Near-Expiry
                 </h1>
             </div>
-            <Table v-if="reports.nearExpiryWarranties?.length > 0" :headers="headers">
-                <tr v-for="nearExpiry in reports.nearExpiryWarranties" :key="nearExpiry">
+            <Table v-if="props.nearExpiryWarranties?.length > 0" :headers="headers">
+                <tr v-for="nearExpiry in props.reports.nearExpiryWarranties" :key="nearExpiry">
                     <td class="table-text">
                         {{ nearExpiry.product.name }}
                     </td>

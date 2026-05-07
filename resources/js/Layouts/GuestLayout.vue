@@ -91,11 +91,8 @@ const toggleNavMobile = () => isMobileNavActive.value = !isMobileNavActive.value
                             :class="[isActiveLink('/about') ? 'bg-gray-200 text-neutral-900' : 'text-neutral-500', 'text-md', 'font-medium', 'py-1', 'px-2', 'text-center', 'rounded-md', 'hover:bg-gray-100', 'hover:text-neutral-700', 'transition-colors']">
                             About</Link>
                         <Link href="/products"
-                            :class="[isActiveLink('/products') ? 'bg-gray-200 text-neutral-900' : 'text-neutral-500', 'text-md', 'font-medium', 'py-1', 'px-2', 'text-center', 'rounded-md', 'hover:bg-gray-100', 'hover:text-neutral-700', 'transition-colors']">
+                            :class="[page.component === 'Manager/LandingProducts' ? 'bg-gray-200 text-neutral-900' : 'text-neutral-500', 'text-md', 'font-medium', 'py-1', 'px-2', 'text-center', 'rounded-md', 'hover:bg-gray-100', 'hover:text-neutral-700', 'transition-colors']">
                             Products</Link>
-                        <Link href="/faq"
-                            :class="[isActiveLink('/faq') ? 'bg-gray-200 text-neutral-900' : 'text-neutral-500', 'text-md', 'font-medium', 'py-1', 'px-2', 'text-center', 'rounded-md', 'hover:bg-gray-100', 'hover:text-neutral-700', 'transition-colors']">
-                            FAQ</Link>
                     </nav>
                 </div>
             </div>

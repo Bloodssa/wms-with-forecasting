@@ -29,13 +29,6 @@ const headers = ['Date', 'Issue', 'Action Taken', 'Status'];
 const hasActiveInquiry = computed(() => !!props.activeInquiry);
 const hasReview = computed(() => !!props.review);
 
-onMounted(() => {
-    const saved = localStorage.getItem('warranty_tab')
-    if (saved) {
-        activeTab.value = saved
-    }
-});
-
 const formatDate = (date) => {
     return dayjs(date).format('MMM DD, YYYY')
 }

@@ -16,33 +16,33 @@ const props = defineProps({
 });
 
 // broadcast init
-// const allMessages = ref([...props.messages]);
+const allMessages = ref([...props.messages]);
 
-// // sync the props if failed in echo
-// watch(() => props.messages, (newVal) => {
-//     allMessages.value = newVal;
-// }, { deep: true });
+// sync the props if failed in echo
+watch(() => props.messages, (newVal) => {
+    allMessages.value = newVal;
+}, { deep: true });
 
-// onMounted(() => {
-//     window.Echo.private(`inquiry.${props.inquiryId}`)
-//         .listen('.ResponseSent', (e) => {
-//             // check message already exists to prevent duplicates
-//             const exists = allMessages.value.some(m => m.id === e.response.id);
-//             if (!exists) {
-//                 allMessages.value.push(e.response);
-//                 // scrollToBottom();
-//             }
-//         })
-//         .listen('.InquiryUpdated', (e) => { // If you have a status update event
-//             allMessages.value.push(e.update);
-//             scrollToBottom();
-//         });
-// });
+onMounted(() => {
+    window.Echo.private(`inquiry.${props.inquiryId}`)
+        .listen('.ResponseSent', (e) => {
+            // check message already exists to prevent duplicates
+            const exists = allMessages.value.some(m => m.id === e.response.id);
+            if (!exists) {
+                allMessages.value.push(e.response);
+                // scrollToBottom();
+            }
+        })
+        .listen('.InquiryUpdated', (e) => { // If you have a status update event
+            allMessages.value.push(e.update);
+            scrollToBottom();
+        });
+});
 
-// // remove chanell
-// onUnmounted(() => {
-//     window.Echo.leave(`inquiry.${props.inquiryId}`);
-// });
+// remove chanell
+onUnmounted(() => {
+    window.Echo.leave(`inquiry.${props.inquiryId}`);
+});
 
 const currentTime = ref(dayjs());
 let timer = null;

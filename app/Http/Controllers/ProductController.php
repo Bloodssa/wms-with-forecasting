@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Route;  
 
 class ProductController extends Controller
 {
@@ -48,7 +49,7 @@ class ProductController extends Controller
             ->when($request->category_search, function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%");
             })
-            ->latest()
+            ->orderBy('id', 'desc')
             ->get();
 
         $categoriesForFilter = Category::select('name', 'slug')->get();
@@ -88,7 +89,7 @@ class ProductController extends Controller
 
         // store in public storage
         $imagePath = $request->file('product_image_url')->store('products', 'public');
-        $data['product_image_url'] = $imagePath; 
+        $data['product_image_url'] = $imagePath;
 
         Product::create($data);
 
@@ -152,7 +153,7 @@ class ProductController extends Controller
     public function storeCategory(Request $request)
     {
         $this->authorize('create', Product::class);
-        
+
         $data = $request->validate([
             'name' => ['required', 'string']
         ]);
@@ -297,7 +298,7 @@ class ProductController extends Controller
 
     public function productReviews(string $id): Response
     {
-        $product = Product::query()->select(['id', 'name'])->with(['reviews.user']) ->findOrFail($id);
+        $product = Product::query()->select(['id', 'name'])->with(['reviews.user'])->findOrFail($id);
 
         $user = Auth::user();
 
@@ -405,6 +406,53 @@ class ProductController extends Controller
         return back()->with('success', 'Review edited successfully');
     }
 
+    /**
+     * Guest products
+     */
+    public function landingPageProducts(Request $request): Response
+    {
+        $products = Product::query()
+            ->select(['id', 'name', 'category_id', 'price', 'product_image_url', 'warranty_duration', 'brand'])
+            ->with(['category:id,name'])
+            ->withAvg('reviews as averageRating', 'rating')
+            ->withCount('reviews')
+            ->when($request->search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('brand', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->filled('category'), function ($query) use ($request) {
+                $query->whereHas('category', function ($q) use ($request) {
+                    $q->where('slug', $request->category);
+                });
+            })
+            ->latest()
+            ->get();
+
+        return Inertia::render('Customer/LandingProducts', [
+            'products' => $products,
+            'categories' => Category::select('name', 'slug')->get(),
+            'filters' => [
+                'search' => request('search'),
+                'category' => request('category'),
+            ],
+            'canLogin' => Route::has('login'),
+            'canRegister' => Route::has('register'),
+        ]);
+    }
+
+    public function landingPageProductsDetails(string $id)
+    {
+        $product = Product::with(['category:id,name', 'reviews.user'])->findOrFail($id);
+
+        return Inertia::render('Customer/LandingDetails', [
+            'product' => $product,
+            'ratingStats' => $this->ratignStats($product),
+            'canLogin' => Route::has('login'),
+            'canRegister' => Route::has('register'),
+        ]);
+    }
 
     /**
      * Helpers
