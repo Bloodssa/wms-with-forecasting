@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Str;
 
 class PendingInquiryResource extends JsonResource
 {
@@ -16,9 +17,9 @@ class PendingInquiryResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->user->name,
-            'email'=> $this->user->email,
-            'product' => $this->warranty->product->name,
+            'name' => $this->warranty->user->name,
+            'email'=> $this->warranty->user->email,
+            'product' => Str::limit($this->warranty->product->name, 12, '...'),
             'inquiry_date' => $this->created_at->format('M d, Y')
         ];
     }

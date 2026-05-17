@@ -43,9 +43,9 @@ class ManagerController extends Controller
             'chart' => $this->getWarrantyChartData(),
             'mostReportedProducts' => $this->mostReportedProduct(),
             'latestInquiries' => WarrantyInquiries::query()
-                ->select(['id', 'user_id', 'warranty_id', 'status'])
-                ->with(['user:id,name', 'warranty:id,product_id', 'warranty.product:id,name'])->latest()->take(5)->get(),
-            'pendingInquiries' => PendingInquiryResource::collection(WarrantyInquiries::with(['user:id,name,email', 'warranty.product:id,name'])->orderBy('created_at', 'desc')->take(5)->get())
+                ->select(['id', 'warranty_id', 'status'])
+                ->with(['warranty:id,user_id,product_id', 'warranty.user:id,name', 'warranty.product:id,name'])->latest()->take(5)->get(),
+            'pendingInquiries' => PendingInquiryResource::collection(WarrantyInquiries::with(['warranty', 'warranty.product:id,name'])->orderBy('created_at', 'desc')->take(5)->get())
         ]);
     }
 
@@ -69,22 +69,27 @@ class ManagerController extends Controller
     public function warrantyInquiries(Request $request): Response
     {
         $warrantyInquiries = WarrantyInquiries::query()
-            ->select(['id', 'user_id', 'warranty_id', 'message', 'status', 'created_at'])
-            ->with('user:id,name,email', 'warranty:id,product_id,serial_number', 'warranty.product:id,name')
+            ->select(['id', 'warranty_id', 'message', 'status', 'created_at'])
+            ->with([
+                'warranty:id,user_id,product_id,serial_number',
+                'warranty.user:id,name,email',
+                'warranty.product:id,name'
+            ])
             ->withCount([
                 'responses as unread_messages_count' => function ($q) {
                     $q->whereNull('read_at')
-                        ->where('user_id', '!=', Auth::id());
+                    ->where('user_id', '!=', Auth::id());
                 }
             ])
             ->when($request->search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->whereHas('warranty', function ($q2) use ($search) {
                         $q2->where('serial_number', 'like', "%{$search}%")
-                            ->orWhereHas('product', function ($q3) use ($search) {
-                                $q3->where('name', 'like', "%{$search}%");
-                            });
-                    })->orWhereHas('user', function ($q4) use ($search) {
+                        ->orWhereHas('product', function ($q3) use ($search) {
+                            $q3->where('name', 'like', "%{$search}%");
+                        });
+                    })
+                    ->orWhereHas('warranty.user', function ($q4) use ($search) {
                         $q4->where('name', 'like', "%{$search}%");
                     });
                 });
@@ -108,7 +113,7 @@ class ManagerController extends Controller
      */
     public function inquiryResponse(int $id): Response
     {
-        $inquiry = WarrantyInquiries::with(['warranty.product.category', 'user', 'responses.user'])
+        $inquiry = WarrantyInquiries::with(['warranty.product.category', 'warranty.user', 'responses.user'])
             ->findOrFail($id);
 
         // collect and combine inquiry and messages
@@ -131,7 +136,7 @@ class ManagerController extends Controller
     public function warranties(Request $request): Response
     {
         $warranties = Warranty::query()
-            ->select(['id', 'product_id', 'user_id', 'serial_number', 'is_claimed', 'claim_email', 'status', 'purchase_date', 'expiry_date'])
+            ->select(['id', 'product_id', 'user_id', 'serial_number', 'archived_at', 'is_claimed', 'claim_email', 'status', 'purchase_date', 'expiry_date'])
             ->with(['product:id,name,product_image_url', 'user:id,name'])
             ->when($request->search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
@@ -164,7 +169,7 @@ class ManagerController extends Controller
             ->where('id', $id)
             ->firstOrFail();
 
-        $history = WarrantyInquiries::with('user')->where('warranty_id', $warranty->id)->get();
+        $history = WarrantyInquiries::with('warranty.user')->where('warranty_id', $warranty->id)->get();
 
         return Inertia::render('Manager/ShowWarranty', [
             'warranty' => $warranty,
@@ -187,7 +192,7 @@ class ManagerController extends Controller
                     $query->where('status', WarrantyStatusType::EXPIRED);
                 }
             ])
-            ->withMax('inquiries as last_inquiry_status', 'status') // max or latest created_at
+            ->withMax('warranties as last_inquiry_status', 'status') // max or latest created_at
             ->when($request->search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -220,7 +225,7 @@ class ManagerController extends Controller
     {
         $data = $this->reportsData($request);
 
-        $pdf = Pdf::loadView('warranty-report', $data);
+        $pdf = Pdf::loadView('warranty-report', $data)->setPaper('letter', 'portrait');
         return $pdf->download("warranty-report-{$data['periodLabel']}.pdf");
     }
 

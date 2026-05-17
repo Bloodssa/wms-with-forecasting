@@ -84,12 +84,15 @@ Route::middleware('auth', 'manager')->group(function() {
     Route::get('/manager/profile', [ManagerController::class, 'profile'])->name('manager.profile');
 
     // Warranty
+    Route::get('/invoice/download', [WarrantyController::class, 'downloadInvoice'])->name('warranty.download-invoice');
     Route::get('/warranties/{id}', [ManagerController::class, 'showWarranty'])->name('view-warranty');
     Route::post('/register-warranty', [WarrantyController::class, 'store'])->name('register-warranty-details');
     Route::post('/response', [WarrantyController::class, 'response'])->name('response');
     Route::patch('/warranty-status/{id}', [WarrantyController::class, 'update'])->name('inquiry-status');
     Route::post('/create-employee', [ManagerController::class, 'store'])->name('create-employee');
     Route::put('/warranties/{warranty}', [WarrantyController::class, 'updateWarranty'])->name('warranties.update');
+    Route::put('/warranties/{warranty}/archive', [WarrantyController::class, 'archiveWarranty'])->name('warranties.archive');
+    Route::put('/warranties/{warranty}/unarchive', [WarrantyController::class, 'unarchiveWarranty'])->name('warranties.unarchive');
     Route::delete('/warranties/{warranty}', [WarrantyController::class, 'destroyWarranty'])->name('warranties.destroy');
 
     // products

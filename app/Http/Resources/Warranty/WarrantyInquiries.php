@@ -25,8 +25,8 @@ class WarrantyInquiries extends JsonResource
             'submitted_at' => $localDate->gt(now()->subDay()) 
                 ? $localDate->diffForHumans() : $localDate->format('M d, Y'),
             'user' => [
-                'name' => $this->user?->name,
-                'email' => $this->user->email
+                'name' => $this->warranty->user?->name,
+                'email' => $this->warranty->user->email
             ],
             'warranty' => [
                 'serial_number' => $this->warranty->serial_number,

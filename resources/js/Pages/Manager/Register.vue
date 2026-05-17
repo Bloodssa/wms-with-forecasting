@@ -54,7 +54,6 @@ const getProductCount = (productId) => {
 // Form inputs init
 const form = useForm({
     claim_email: '',
-    purchase_date: '',
     multiple_products: []
 });
 
@@ -71,7 +70,28 @@ const findProductName = (id) => {
 const submit = () => {
     form.post(route('register-warranty-details'), {
         preserveScroll: true,
-        onSuccess: () => {
+        onSuccess: (page) => {
+            const ids = page.props.flash?.download_ids;
+
+            // if (ids && ids.length > 0) {
+            //     const queryString = ids.map(id => `ids[]=${id}`).join('&');
+            //     const downloadUrl = `${route('warranty.download-invoice')}?${queryString}`;
+
+            //     const link = document.createElement('a');
+            //     link.href = downloadUrl;
+            //     link.target = '_blank';
+            //     document.body.appendChild(link);
+            //     link.click();
+            //     document.body.removeChild(link);
+            // }
+            if (ids && ids.length > 0) {
+                const queryString = ids.map(id => `ids[]=${id}`).join('&');
+                const downloadUrl = `${route('warranty.download-invoice')}?${queryString}`;
+
+                // open in a new tab to view
+                window.open(downloadUrl, '_blank');
+            }
+
             form.reset();
         },
     });
@@ -116,21 +136,6 @@ const filteredProducts = computed(() => {
                             <TextInput id="claim_email" v-model="form.claim_email" type="email"
                                 placeholder="customer@email.com" />
                             <InputError class="mt-1" :message="form.errors.claim_email" />
-                        </div>
-                        <div class="w-full">
-                            <InputLabel for="purchase_date" value="Purchase Date" />
-                            <div class="relative w-full">
-                                <div class="absolute inset-y-0 inset-s-0 flex items-center ps-3 pointer-events-none">
-                                    <svg class="w-4 h-4 text-neutral-500" fill="none" viewBox="0 0 24 24"
-                                        stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                </div>
-                                <input type="date" v-model="form.purchase_date"
-                                    class="input-border border-gray-300 focus:border-neutral-900 block w-full ps-10 pe-3 py-2.25 bg-white border rounded-md" />
-                            </div>
-                            <InputError class="mt-1" :message="form.errors.purchase_date" />
                         </div>
                     </div>
                 </div>

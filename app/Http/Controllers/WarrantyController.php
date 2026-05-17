@@ -25,6 +25,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Validation\Rule;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Storage;
 
 class WarrantyController extends Controller
 {
@@ -35,10 +38,10 @@ class WarrantyController extends Controller
         }
 
         $validated = $request->validate([
-            'serial_number' => 'required|string|max:255|unique:warranties,serial_number,' . $warranty->id,
-            'purchase_date' => 'required|date',
-            'expiry_date'   => 'required|date|after_or_equal:purchase_date',
-            'status'        => 'required|in:active,pending,near-expiry,expired',
+            'serial_number' => ['required', 'string', 'max:255', Rule::unique('warranties', 'serial_number')->ignore($warranty->id)],
+            'purchase_date' => ['required', 'date'],
+            'expiry_date' => ['required', 'date', 'after_or_equal:purchase_date'],
+            'status' => ['required', Rule::enum(WarrantyStatusType::class)],
         ]);
 
         $warranty->update($validated);
@@ -51,10 +54,38 @@ class WarrantyController extends Controller
         if (Auth::user()->role !== UserRole::ADMIN) {
             return Redirect::back()->with('error', 'Only admins can update warranties.');
         }
-        
+
         $warranty->delete();
 
         return Redirect::back()->with('success', 'Warranty deleted successfully.');
+    }
+
+    /**
+     * Archive warranty
+     */
+    public function archiveWarranty(Warranty $warranty)
+    {
+        $warranty->update([
+            'status' => WarrantyStatusType::ARCHIVED,
+            'archived_at' => now(),
+        ]);
+
+        return back()->with('success', 'Warranty archived.');
+    }
+
+    /**
+     * Cancel archive
+     */
+    public function unarchiveWarranty(Warranty $warranty)
+    {
+        $warranty->archived_at = null;
+
+        $warranty->update([
+            'archived_at' => null,
+            'status' => $this->computeStatus($warranty),
+        ]);
+
+        return back()->with('success', 'Warranty restored.');
     }
 
     public function inquire(InquiryWarrantyRequest $request)
@@ -167,22 +198,20 @@ class WarrantyController extends Controller
      */
     public function store(StoreWarrantyRequest $request)
     {
-        // dd($request);
         $data = $request->validated();
 
         $createdWarranties = [];
         $user = null;
 
-        // create multiple warranties
         DB::transaction(function () use ($data, &$user, &$createdWarranties) {
-            $user = User::where('email', $data['claim_email'])->first(); // find customer if it exists
 
-            $createdWarranties = []; // init created warrabties to pass in the mail
+            $user = User::where('email', $data['claim_email'])->first();
 
             foreach ($data['multiple_products'] as $item) {
+
                 $product = Product::findOrFail($item['product_id']);
 
-                $purchaseDate = Carbon::parse($data['purchase_date']);
+                $purchaseDate = now();
                 $expiryDate = $purchaseDate->copy()->addMonths($product->warranty_duration);
 
                 $warranty = Warranty::create([
@@ -194,30 +223,66 @@ class WarrantyController extends Controller
                     'purchase_price' => $item['price'],
                     'expiry_date' => $expiryDate,
                     'status' => $user ? WarrantyStatusType::ACTIVE : WarrantyStatusType::PENDING,
-                    'is_claimed' => (bool)$user
+                    'is_claimed' => (bool) $user
                 ]);
 
-                $createdWarranties[] = $warranty->id; // store warranty id to query and send with products details in one mail
+                $createdWarranties[] = $warranty->id;
             }
         });
 
-        // log email
-        Log::info('User Warranty Send mail: ' . $data['claim_email']); // incase mail expired
-        // send email if user not registered
-        if (! $user) {
-            $warranties = Warranty::with('product')
-                ->whereIn('id', $createdWarranties) // send id to get all the warranties stored
-                ->get();
+        $warranties = Warranty::with('product')
+            ->whereIn('id', $createdWarranties)
+            ->get();
 
-            $registrationLink = URL::temporarySignedRoute('customer.claim', now()->addDays(60), ['email' => $data['claim_email']]);
+        Log::info('User Warranty Send mail: ' . $data['claim_email']);
 
-            Mail::to($data['claim_email'])->send(new WarrantyInvitation(
-                $warranties,
-                $data['claim_email'],
-                $registrationLink
-            ));
+        $registrationLink = URL::temporarySignedRoute(
+            'customer.claim',
+            now()->addDays(60),
+            ['email' => $data['claim_email']]
+        );
+
+        Mail::to($data['claim_email'])->send(new WarrantyInvitation(
+            $warranties,
+            $data['claim_email'],
+            $registrationLink
+        ));
+
+        return redirect()->route('register-warranty') // Use the name of your registration page route
+            ->with([
+                'success' => 'Warranty registered successfully!',
+                'download_ids' => $createdWarranties
+            ]);
+        // return redirect('register-warranty')
+        //     ->with('success', 'Warranty created and email sent!');
+    }
+
+    /**
+     * Download invoice
+     */
+    public function downloadInvoice(Request $request)
+    {
+        $ids = $request->query('ids');
+
+        if (!$ids || !is_array($ids)) {
+            return response()->json(['error' => 'No IDs provided'], 400);
         }
-        return redirect('register-warranty')->with('success', 'Warranty created and email sent!');
+
+        $warranties = Warranty::with('product')->whereIn('id', $ids)->get();
+
+        if ($warranties->isEmpty()) {
+            return response()->json(['error' => 'No warranties found'], 404);
+        }
+
+        $pdf = Pdf::loadView('warranty-invoice', [
+            'warranties' => $warranties,
+            'email' => $warranties->first()->claim_email,
+            'total' => $warranties->sum('purchase_price'),
+            'date' => now()
+        ]);
+
+        return $pdf->stream('warranty-invoice.pdf');
+        // return $pdf->download('warranty-invoice-' . now()->timestamp . '.pdf');
     }
 
     /**
@@ -392,5 +457,24 @@ class WarrantyController extends Controller
         ]);
 
         return back()->with('success', 'Warranty successfully claimed Product Name: ' . $warranty->product->name);
+    }
+
+    private function computeStatus(Warranty $warranty)
+    {
+        if ($warranty->archived_at) {
+            return WarrantyStatusType::ARCHIVED;
+        }
+
+        $now = now();
+
+        if ($warranty->expiry_date <= $now) {
+            return WarrantyStatusType::EXPIRED;
+        }
+
+        if ($warranty->expiry_date <= $now->copy()->addMonth()) {
+            return WarrantyStatusType::NEAR_EXPIRY;
+        }
+
+        return WarrantyStatusType::ACTIVE;
     }
 }

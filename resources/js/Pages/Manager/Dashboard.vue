@@ -156,8 +156,8 @@ const goToInquiry = (id) => {
                             <tr class="hover:bg-gray-100 transition duration-200" @click="goToInquiry(latest.id)" v-for="latest in latestInquiries" :key="latest.id">
                                 <td class="table-text">
                                     <div class="flex items-center space-x-2">
-                                        <Avatar :name="latest.user.name" class="h-8 w-8" />
-                                        <span class="font-semibold">{{ latest.user.name }}</span>
+                                        <Avatar :name="latest.warranty.user.name" class="h-8 w-8" />
+                                        <span class="font-semibold">{{ latest.warranty.user.name }}</span>
                                     </div>
                                 </td>
                                 <td class="table-text">

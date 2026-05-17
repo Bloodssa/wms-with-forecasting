@@ -24,11 +24,6 @@ class WarrantyInquiries extends Model
         'read_at' => 'datetime'
     ];
 
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
     public function warranty(): BelongsTo
     {
         return $this->belongsTo(Warranty::class);

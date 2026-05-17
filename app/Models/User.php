@@ -63,11 +63,6 @@ class User extends Authenticatable
         return $this->hasMany(Warranty::class);
     }
 
-    public function inquiries(): HasMany
-    {
-        return $this->hasMany(WarrantyInquiries::class);
-    }
-
     public function reviews(): HasMany
     {
         return $this->hasMany(ProductReview::class);
@@ -150,13 +145,13 @@ class User extends Authenticatable
         $twoMonthsAgo = now()->subMonths(2)->startOfDay();
 
         // new warranty inquiries
-        $newInquiries = WarrantyInquiries::with(['user', 'warranty.product'])
+        $newInquiries = WarrantyInquiries::with(['warranty.product'])
             ->whereIn('status', ['open', 'pending'])
             ->where('created_at', '>=', $twoMonthsAgo)
             ->get()
             ->map(fn($i) => [
                 'type' => 'danger', // high priority
-                'message' => "New inquiry from {$i->user->name} regarding {$i->warranty->product->name}",
+                'message' => "New inquiry from {$i->warranty->user->name} regarding {$i->warranty->product->name}",
                 'date' => $i->created_at,
                 'link' => route('inquiry-action', $i->id),
             ]);

@@ -23,7 +23,6 @@ class StoreWarrantyRequest extends FormRequest
     {
         return [
             'claim_email' => ['required', 'email'],
-            'purchase_date' => ['required', 'date'],
             'multiple_products' => ['required', 'array', 'min:1'],
             'multiple_products.*.product_id' => [
                 'required',

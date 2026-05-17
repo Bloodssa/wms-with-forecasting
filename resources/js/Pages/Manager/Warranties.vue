@@ -8,7 +8,7 @@ import Avatar from '@/Components/Icons/Avatar.vue';
 import Badge from '@/Components/Badge.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import useCountdown from '@/composables/useCountDown';
-import { EllipsisVertical, Eye, SearchAlert, SquarePen, Trash2 } from 'lucide-vue-next';
+import { EllipsisVertical, Eye, SearchAlert, SquarePen, Trash2, Archive } from 'lucide-vue-next';
 import BaseModal from '@/Components/Modals/BaseModal.vue';
 import InputLabel from '@/Components/Forms/InputLabel.vue';
 import TextInput from '@/Components/Forms/TextInput.vue';
@@ -88,8 +88,22 @@ const submitEdit = () => {
     });
 };
 
-const confirmDelete = () => {
+const forceDelete = () => {
     router.delete(route('warranties.destroy', selectedWarranty.value.id), {
+        onSuccess: () => closeModal(),
+    });
+};
+
+const archiveWarranty = () => {
+    router.put(route('warranties.archive', selectedWarranty.value.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => closeModal(),
+    });
+};
+
+const unarchiveWarranty = () => {
+    router.put(route('warranties.unarchive', selectedWarranty.value.id), {}, {
+        preserveScroll: true,
         onSuccess: () => closeModal(),
     });
 };
@@ -165,7 +179,8 @@ const confirmDelete = () => {
                                     class="p-2 border border-gray-300 rounded-md bg-white hover:bg-gray-200 transition duration-150">
                                     <Eye class="hover:text-neutral-700" />
                                 </Link>
-                                <button v-if="$page.props.auth.user.role === 'admin'" @click.stop="toggleActions(warranty.id)"
+                                <button v-if="$page.props.auth.user.role === 'admin'"
+                                    @click.stop="toggleActions(warranty.id)"
                                     class="ml-1 text-neutral-500 hover:text-neutral-900 transition p-2 rounded-md border border-gray-300 bg-white hover:bg-gray-100">
                                     <EllipsisVertical class="h-4 w-4" />
                                 </button>
@@ -246,25 +261,56 @@ const confirmDelete = () => {
     <!-- DELETE MODAL -->
     <BaseModal size="sm" :show="showDeleteModal" @close="closeModal">
         <div class="p-6 flex flex-col items-center text-center">
-            <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-500">
-                <Trash2 class="w-8 h-8" />
+            <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-50">
+                <Trash2 v-if="selectedWarranty?.status === 'archived'" class="w-8 h-8 text-red-500" />
+                <Archive v-else class="w-8 h-8 text-orange-500" />
             </div>
-            <h4 class="text-xl font-bold text-gray-800">Delete Warranty?</h4>
+            <h4 class="text-xl font-bold text-gray-800">
+                {{
+                    selectedWarranty?.status === 'archived'
+                        ? 'Permanently Delete Warranty?'
+                        : 'Delete Warranty?'
+                }}
+            </h4>
             <p class="mt-2 text-sm text-gray-500">
-                Are you sure you want to delete warranty <span class="font-bold text-neutral-900">{{
-                    selectedWarranty?.serial_number }}</span>?
-                This will also delete all associated inquiry messages.
-            </p>
+                <template v-if="selectedWarranty?.status === 'archived'">
+                    This warranty is archived.
+                    <span class="font-bold text-neutral-900">
+                        {{ selectedWarranty?.days_left ?? 0 }} days left
+                    </span>
+                    before permanent deletion.
+                </template>
 
+                <template v-else>
+                    Are you sure you want to delete warranty
+                    <span class="font-bold text-neutral-900">
+                        {{ selectedWarranty?.serial_number }}
+                    </span>?
+                    This will move it to archive first.
+                </template>
+
+            </p>
             <div class="mt-6 flex justify-center gap-3 w-full">
+
                 <button @click="closeModal"
                     class="flex-1 px-4 py-2 border border-gray-300 text-sm rounded-md text-neutral-900 hover:bg-gray-50">
                     Cancel
                 </button>
-                <button @click="confirmDelete"
-                    class="flex-1 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700 transition">
-                    Yes, Delete
+                <button v-if="selectedWarranty?.status !== 'archived'" @click="archiveWarranty"
+                    class="flex-1 px-4 py-2 bg-yellow-600 text-white text-sm font-semibold rounded-md hover:bg-yellow-700">
+                    Archive
                 </button>
+
+                <button v-if="selectedWarranty?.status === 'archived'" @click="unarchiveWarranty"
+                    class="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-md hover:bg-blue-700">
+                    Cancel Archive, Restore
+                </button>
+
+                <button v-if="selectedWarranty?.status === 'archived'" @click="forceDelete"
+                    class="flex-1 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700">
+                    Delete Now
+                </button>
+
             </div>
         </div>
     </BaseModal>

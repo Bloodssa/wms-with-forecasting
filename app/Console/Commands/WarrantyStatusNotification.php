@@ -66,5 +66,15 @@ class WarrantyStatusNotification extends Command
         Warranty::whereDate('expiry_date', '>', $thirtyDays)
             ->where('status', '!=', WarrantyStatusType::ACTIVE)
             ->update(['status' => WarrantyStatusType::ACTIVE]);
+
+        // delete archive warranties will be deleted 60 days
+        Warranty::where('status', WarrantyStatusType::ARCHIVED)
+            ->whereNotNull('archived_at')
+            ->whereDate('archived_at', '<=', now()->subDays(60))
+            ->chunk(100, function ($warranties) {
+                foreach ($warranties as $warranty) {
+                    $warranty->delete();
+                }
+            });
     }
 }

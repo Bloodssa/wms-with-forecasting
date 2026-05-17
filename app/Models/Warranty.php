@@ -19,7 +19,8 @@ class Warranty extends Model
         'purchase_price',
         'expiry_date', 
         'status',
-        'is_claimed'
+        'is_claimed',
+        'archived_at'
     ];
 
     // cast the date to Carbon
@@ -27,7 +28,8 @@ class Warranty extends Model
         'purchase_date' => 'date',
         'expiry_date' => 'date',
         'status' => WarrantyStatusType::class,
-        'is_claimed' => 'boolean'
+        'is_claimed' => 'boolean',
+        'archived_at' => 'date'
     ];
 
     public function user(): BelongsTo

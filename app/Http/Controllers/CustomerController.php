@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Enum\InquiryStatusType;
 use App\Enum\WarrantyStatusType;
-use App\Models\InquiryResponse;
-use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ProductReview;
 use App\Models\Warranty;
@@ -37,7 +35,9 @@ class CustomerController extends Controller
             ->take(3)
             ->get();
 
-        $resolvedInquiryCount = WarrantyInquiries::whereUserId($userId)
+        $resolvedInquiryCount = WarrantyInquiries::whereHas('warranty', function ($q) use ($userId) {
+                $q->where('user_id', $userId);
+            })
             ->where('status', InquiryStatusType::RESOLVED)
             ->count();
 
@@ -126,7 +126,9 @@ class CustomerController extends Controller
                         ->where('user_id', '!=', Auth::id());
                 }
             ])
-            ->whereUserId(Auth::user()->id)
+            ->whereHas('warranty', function($q) {
+                $q->where('user_id', Auth::id());
+            })
             ->whereIn('status', [InquiryStatusType::OPEN, InquiryStatusType::PENDING, InquiryStatusType::IN_PROGRESS])
             ->when($request->search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
@@ -176,7 +178,7 @@ class CustomerController extends Controller
             ]);
 
         $inquiries = WarrantyInquiries::with('warranty.product')
-            ->whereUserId($userId)
+            ->whereHas('warranty', fn ($q) => $q->where('user_id', $userId))
             ->get()
             ->map(fn($inquiry) => (object)[
                 'type' => 'new',
@@ -187,7 +189,7 @@ class CustomerController extends Controller
             ]);
 
         $statusUpdates = WarrantyInquiries::with('warranty.product')
-            ->whereUserId($userId)
+            ->whereHas('warranty', fn ($q) => $q->where('user_id', $userId))
             ->whereIn('status', ['resolved', 'replaced', 'closed'])
             ->get()
             ->map(function ($update) {
@@ -253,24 +255,24 @@ class CustomerController extends Controller
 
         // get the warranty info for the id
         // need resource
-        $warranty = Warranty::with(['product.category', 'inquiries', 'inquiries.user', 'inquiries.responses.user'])
+        $warranty = Warranty::with(['product.category', 'inquiries', 'inquiries.responses.user'])
             ->whereUserId($userId)
             ->where('id', $id)
             ->firstOrFail();
         // dd($warranty);
 
-        $history = WarrantyInquiries::with('user')->where('warranty_id', $warranty->id)->get();
+        $history = WarrantyInquiries::with('warranty.user')->where('warranty_id', $warranty->id)->get();
         // use the temporary helper for message
         $messages = $this->inquiryMessages($warranty->inquiries);
 
         // get the latest inquiry of this warranty
-        $latestInquiry = WarrantyInquiries::where('user_id', $userId)
+        $latestInquiry = WarrantyInquiries::whereHas('warranty', fn ($q) => $q->where('user_id', $userId))
             ->where('warranty_id', $warranty->id)
             ->latest()
             ->first();
 
         // get the inquiry where its not final or closed
-        $activeInquiry = WarrantyInquiries::where('user_id', $userId)
+        $activeInquiry = WarrantyInquiries::whereHas('warranty', fn ($q) => $q->where('user_id', $userId))
             ->where('warranty_id', $warranty->id)
             ->whereNotIn('status', [InquiryStatusType::RESOLVED, InquiryStatusType::CLOSED, InquiryStatusType::REPLACED,])
             ->latest()
@@ -301,11 +303,11 @@ class CustomerController extends Controller
 
         $inquiry = WarrantyInquiries::with([
             'warranty.product.category',
-            'user',
+            'warranty.user',
             'responses.user'
         ])
-            ->where('user_id', Auth::id())
-            ->findOrFail($id);
+        ->whereHas('warranty', fn ($q) => $q->where('user_id', Auth::id()))
+        ->findOrFail($id);
 
         $messages = $this->inquiryMessages(collect([$inquiry]));
 

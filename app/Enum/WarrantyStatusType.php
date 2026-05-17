@@ -8,6 +8,7 @@ enum WarrantyStatusType: string
     case PENDING = 'pending';
     case NEAR_EXPIRY = 'near-expiry';
     case EXPIRED = 'expired';
+    case ARCHIVED = 'archived';
 
     public function label(): string
     {

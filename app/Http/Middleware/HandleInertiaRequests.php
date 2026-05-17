@@ -56,6 +56,7 @@ class HandleInertiaRequests extends Middleware
                     'error' => session('error'),
                     'warning' => session('warning'),
                     'timestamp' => microtime(),
+                    'download_ids' => session('download_ids'),
                 ];
             },
             // notification for customers

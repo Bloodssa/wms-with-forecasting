@@ -176,10 +176,10 @@ const can = computed(() => page.props.can ?? {});
                     class="lg:col-span-2 flex flex-col bg-white border border-gray-300 rounded-md h-200 overflow-hidden">
                     <div class="px-5 py-4 border-b border-gray-300">
                         <div class="flex items-center space-x-2">
-                            <Avatar :name="props.inquiry.user.name" class="h-8 w-8" />
+                            <Avatar :name="props.inquiry.warranty.user.name" class="h-8 w-8" />
                             <div>
-                                <p class="font-semibold">{{ props.inquiry.user.name }}</p>
-                                <p class="font-normal text-xs text-neutral-500">{{ props.inquiry.user.email }}</p>
+                                <p class="font-semibold">{{ props.inquiry.warranty.user.name }}</p>
+                                <p class="font-normal text-xs text-neutral-500">{{ props.inquiry.warranty.user.email }}</p>
                             </div>
                         </div>
                     </div>
