@@ -45,7 +45,7 @@ const submitReply = (id) => {
 };
 
 const deleteReply = (id) => {
-    router.delete(route('review-reply-delete', id), {
+    router.put(route('review-reply-delete', id), {
         preserveScroll: true,
         onSuccess: () => {
             cancelReply();

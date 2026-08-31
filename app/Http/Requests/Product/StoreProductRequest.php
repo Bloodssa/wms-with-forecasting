@@ -5,6 +5,7 @@ namespace App\Http\Requests\Product;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use App\Enum\UserRole;
+use App\Models\Product;
 
 class StoreProductRequest extends FormRequest
 {
@@ -13,14 +14,7 @@ class StoreProductRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        $user = $this->user();
-
-        // Check if user exists and role validation using the enum values
-        return $user && $user->hasAnyRole([
-            UserRole::ADMIN->value,
-            UserRole::STAFF->value,
-            UserRole::TECHNICIAN->value
-        ]);
+        return $this->user()->can('create', Product::class);
     }
 
     /**

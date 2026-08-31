@@ -12,13 +12,7 @@ class UpdateProductRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        $user = $this->user();
-
-        return $user && $user->hasAnyRole([
-            UserRole::ADMIN->value,
-            UserRole::STAFF->value,
-            UserRole::TECHNICIAN->value
-        ]);
+        return $this->user()->can('update', $this->product);
     }
 
     /**

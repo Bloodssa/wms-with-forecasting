@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { router, useForm, Link } from '@inertiajs/vue3';
+import { useForm, Link } from '@inertiajs/vue3';
 import { CircleX } from 'lucide-vue-next';
 import InputLabel from '../Forms/InputLabel.vue';
 import InputError from '../Forms/InputError.vue';

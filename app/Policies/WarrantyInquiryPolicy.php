@@ -6,8 +6,6 @@ use App\Enum\InquiryStatusType;
 use App\Enum\UserRole;
 use App\Models\User;
 use App\Models\WarrantyInquiries;
-use App\Models\Warranty;
-use Illuminate\Auth\Access\Response;
 
 class WarrantyInquiryPolicy
 {

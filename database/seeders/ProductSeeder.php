@@ -15,7 +15,7 @@ class ProductSeeder extends Seeder
     {
         $products = [
             [
-                'id' => 1,
+                'id' => 6,
                 'category_id' => 1,
                 'name' => 'Ryzen 5 7500F',
                 'brand' => 'AMD',
@@ -27,7 +27,7 @@ class ProductSeeder extends Seeder
                 'service_center_address' => 'Ayala Ave, Makati, Metro Manila',
             ],
             [
-                'id' => 2,
+                'id' => 7,
                 'category_id' => 3,
                 'name' => 'RTX 4060 TI',
                 'brand' => 'GIGABYTE',
@@ -39,7 +39,7 @@ class ProductSeeder extends Seeder
                 'service_center_address' => 'Osmeña Blvd, Cebu City, Cebu',
             ],
             [
-                'id' => 3,
+                'id' => 8,
                 'category_id' => 5,
                 'name' => 'Razer Blackshark V2',
                 'brand' => 'Razer',
@@ -51,7 +51,7 @@ class ProductSeeder extends Seeder
                 'service_center_address' => 'Ortigas Center, Pasig, Metro Manila',
             ],
             [
-                'id' => 4,
+                'id' => 9,
                 'category_id' => 5,
                 'name' => 'Unveils Mercury V75 Pro Keyboard',
                 'brand' => 'GravaStar',
@@ -63,7 +63,7 @@ class ProductSeeder extends Seeder
                 'service_center_address' => 'Colon St, Cebu City, Cebu',
             ],
             [
-                'id' => 5,
+                'id' => 10,
                 'category_id' => 2,
                 'name' => 'Zephyrus M16',
                 'brand' => 'ROG',

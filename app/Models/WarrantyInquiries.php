@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class WarrantyInquiries extends Model
 {
     protected $fillable = [
-        'user_id',
         'warranty_id',
         'message',
         'status',

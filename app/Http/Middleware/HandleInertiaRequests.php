@@ -3,7 +3,6 @@
 namespace App\Http\Middleware;
 
 use App\Enum\UserRole;
-use App\Models\Product;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 

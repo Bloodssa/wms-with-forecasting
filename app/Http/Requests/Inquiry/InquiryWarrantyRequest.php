@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Warranty;
+namespace App\Http\Requests\Inquiry;
 
 use Illuminate\Foundation\Http\FormRequest;
 

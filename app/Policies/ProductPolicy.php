@@ -5,7 +5,6 @@ namespace App\Policies;
 use App\Enum\UserRole;
 use App\Models\Product;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class ProductPolicy
 {
@@ -43,7 +42,7 @@ class ProductPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, Product $products): bool
+    public function update(User $user, Product $product): bool
     {
         return in_array($user->role, [
             UserRole::ADMIN,
@@ -54,7 +53,7 @@ class ProductPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Product $products): bool
+    public function delete(User $user, Product $product): bool
     {
         return $user->role === UserRole::ADMIN;
     }

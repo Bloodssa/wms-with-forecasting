@@ -1,29 +1,15 @@
 <?php
 
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SocialiteController;
 use App\Http\Controllers\WarrantyController;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-
-// use App\Mail\WarrantyInvitation;
-// // use App\Mail\WarrantyNearExpiry;
-// // use App\Mail\WarrantyExpired;
-// use App\Models\Warranty;
-
-// // // Route to view the email that will be sent to the user
-// Route::get('/preview-mail', function () {
-
-//     $warranty = Warranty::whereNotNull('user_id')->get();
-
-//     return new WarrantyInvitation($warranty, 'test@gmail.com','');
-//     // return new WarrantyNearExpiry($warranty);
-//     // return new WarrantyExpired($warranty);
-// });
 
 Route::middleware('guest')->group(function () {
     Route::get('/', fn() => Inertia::render('Index', [
@@ -35,11 +21,7 @@ Route::middleware('guest')->group(function () {
         'canRegister' => Route::has('register'),
     ]));
     Route::get('/products', [ProductController::class, 'landingPageProducts'])->name('landing.products');
-    Route::get('/products/details/{id}', [ProductController::class, 'landingPageProductsDetails'])->name('landing.details');
-    // Route::get('/faq', fn() => Inertia::render('Faq', [
-    //     'canLogin' => Route::has('login'),
-    //     'canRegister' => Route::has('register'),
-    // ]));
+    Route::get('/products/details/{product}', [ProductController::class, 'landingPageProductsDetails'])->name('landing.details');
 
     // Google OAuth Route
     Route::get('/auth/google', [SocialiteController::class, 'googleLogin'])->name('auth.google');
@@ -59,10 +41,10 @@ Route::middleware('auth', 'customer')->group(function () {
 
     // products
     Route::get('/shop/products', [ProductController::class, 'products'])->name('view-products');
-    Route::get('/shop/products/{id}', [ProductController::class, 'productsDetails'])->name('products-details');
-    Route::get('/shop/products/{id}/reviews', [ProductController::class, 'productReviews'])->name('product-reviews');
-    Route::post('/shop/review/{id}', [ProductController::class, 'storeReview'])->name('store-review');
-    Route::put('/shop/review/{review}', [ProductController::class, 'updateReview'])->name('update-review');
+    Route::get('/shop/products/{product}', [ProductController::class, 'productsDetails'])->name('products-details');
+    Route::get('/shop/products/{product}/reviews', [ProductReviewController::class, 'productReviews'])->name('product-reviews');
+    Route::post('/shop/review/{product}', [ProductReviewController::class, 'store'])->name('store-review');
+    Route::put('/shop/review/{review}', [ProductReviewController::class, 'update'])->name('update-review');
 
     Route::get('/make-inquiry/{id}', [WarrantyController::class, 'storeInquiry'])->name('create-inquiry');
     Route::post('/send-inquiry', [WarrantyController::class, 'inquire'])->name('inquire-warranty');
@@ -97,16 +79,16 @@ Route::middleware('auth', 'manager')->group(function() {
 
     // products
     Route::get('/manage-products', [ProductController::class, 'index'])->name('products');
-    Route::get('/products/{id}', [ProductController::class, 'showProduct'])->name('show.product');
+    Route::get('/products/{product}', [ProductController::class, 'show'])->name('show.product');
     Route::post('/products', [ProductController::class, 'store'])->name('store-product');
-    Route::put('/products/{id}', [ProductController::class, 'update'])->name('update-product');
-    Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('delete-product');
-    Route::put('/products/{review}/reply', [ProductController::class, 'reviewReply'])->name('review-reply');
-    Route::delete('/reviews/{review}/reply', [ProductController::class, 'deleteReply'])->name('review-reply-delete');
+    Route::put('/products/{product}', [ProductController::class, 'update'])->name('update-product');
+    Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('delete-product');
+    Route::put('/products/{review}/reply', [ProductReviewController::class, 'reply'])->name('review-reply');
+    Route::put('/reviews/{review}/reply', [ProductReviewController::class, 'destroy'])->name('review-reply-delete');
 
-    Route::post('/category', [ProductController::class, 'storeCategory'])->name('store-category');
-    Route::put('/category/{id}', [ProductController::class, 'updateCategory'])->name('edit-category');
-    Route::delete('/category/{id}', [ProductController::class, 'destroyCategory'])->name('delete-category');
+    Route::post('/category', [CategoryController::class, 'store'])->name('store-category');
+    Route::put('/category/{category}', [CategoryController::class, 'update'])->name('edit-category');
+    Route::delete('/category/{category}', [CategoryController::class, 'destroy'])->name('delete-category');
 
     // update staffs
     Route::patch('/staff-accounts/{user}/role', [ManagerController::class, 'updateRole'])->name('staff.update-role');

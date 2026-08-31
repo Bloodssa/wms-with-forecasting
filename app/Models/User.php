@@ -41,11 +41,6 @@ class User extends Authenticatable
         'updated_at'
     ];
 
-    // cast the enum
-    protected $casts = [
-        'role' => UserRole::class
-    ];
-
     /**
      * for validation
      * @param array $roles of the users
@@ -212,6 +207,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => UserRole::class
         ];
     }
 }
