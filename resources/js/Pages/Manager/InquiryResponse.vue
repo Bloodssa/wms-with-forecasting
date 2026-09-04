@@ -29,22 +29,37 @@ const currentStatus = computed(() =>
 );
 
 const form = useForm({
-    status: props.inquiry.status?.value || props.inquiry.status
+    status: props.inquiry.status?.value || props.inquiry.status,
+    resolved_message: '',
+});
+
+const serviceRecordForm = useForm({
+    service_type: '',
+    parts_cost: '',
+    labor_cost: '',
+    total_cost: '',
+    notes: '',
 });
 
 // for the update of the status and log message
 const showModal = ref(false);
 const selectedStatus = ref(null);
-const resolutionMessage = ref('');
-const originalStatus = ref(form.status);
+const originalStatus = ref(currentStatus.value);
+
+const statusApplied = ref(false);
 
 const closeModal = () => {
     showModal.value = false;
-    resolutionMessage.value = '';
+    selectedStatus.value = null;
+    statusApplied.value = false;
+    serviceRecordForm.reset();
     form.status = originalStatus.value;
 };
 
 const requiresMessage = ['resolved', 'replaced', 'closed'];
+
+const requiresConfirmation = ['resolved', 'replaced', 'closed'];
+const requiresServiceRecord = ['resolved', 'replaced'];
 
 const isLocked = computed(() =>
     requiresMessage.includes(currentStatus.value)
@@ -56,31 +71,75 @@ const submitStatus = () => {
     const next = form.status;
 
     if (!isAllowedTransition(current, next)) {
-        form.errors.status = "Invalid status transition.";
+        form.errors.status = 'Invalid status transition.';
         return;
     }
 
-    if (requiresMessage.includes(next)) {
+    if (requiresConfirmation.includes(next)) {
         selectedStatus.value = next;
-        originalStatus.value = next;
+        originalStatus.value = current;
+
+        if (next === 'resolved') {
+            serviceRecordForm.service_type = 'repair';
+        }
+
+        if (next === 'replaced') {
+            serviceRecordForm.service_type = 'replacement';
+        }
+
         showModal.value = true;
         return;
     }
 
+    // pending / in-progress: ONLY update status
     sendStatusUpdate();
 };
 
+const finishModal = () => {
+    showModal.value = false;
+    selectedStatus.value = null;
+    statusApplied.value = false;
+    form.resolved_message = '';
+    serviceRecordForm.reset();
+};
+
+const saveServiceRecord = (onDone) => {
+    serviceRecordForm
+        .transform(data => ({
+            ...data,
+            // Empty strings fail `numeric` even under `nullable` — send real null
+            // so the backend can fall back to parts_cost + labor_cost.
+            parts_cost: data.parts_cost === '' ? null : data.parts_cost,
+            labor_cost: data.labor_cost === '' ? null : data.labor_cost,
+            total_cost: data.total_cost === '' ? null : data.total_cost,
+            notes: form.resolved_message,
+        }))
+        .post(
+            route('inquiry.service-record.store', props.inquiry.id),
+            {
+                preserveScroll: true,
+                onSuccess: onDone,
+            }
+        );
+};
+
 const sendStatusUpdate = () => {
-    form.transform(data => ({
-        ...data,
-        resolved_message: resolutionMessage.value
-    })).patch(route('inquiry-status', props.inquiry.id), {
-        preserveScroll: true,
-        onSuccess: () => {
-            showModal.value = false;
-            resolutionMessage.value = '';
+    const status = selectedStatus.value || form.status;
+
+    // resolved/replaced: ONLY create service record
+    if (requiresServiceRecord.includes(status)) {
+        saveServiceRecord(finishModal);
+        return;
+    }
+
+    // closed: ONLY update status
+    form.patch(
+        route('inquiry-status', props.inquiry.id),
+        {
+            preserveScroll: true,
+            onSuccess: finishModal,
         }
-    });
+    );
 };
 
 // days remaining before expiry use created from inquiry and expiry since expiry date is immutable
@@ -102,7 +161,26 @@ const timeLeftAtSubmission = computed(() => {
 
 // check if its covered during submission
 const wasCovered = computed(() => {
-    return daysRemainingAtSubmission.value >= 0;
+    if (
+        !props.inquiry.warranty ||
+        !props.inquiry.warranty.expiry_date ||
+        !props.inquiry.created_at
+    ) {
+        return false;
+    }
+
+    const expiry = dayjs(
+        props.inquiry.warranty.expiry_date
+    );
+
+    const submitted = dayjs(
+        props.inquiry.created_at
+    );
+
+    return (
+        expiry.isAfter(submitted) ||
+        expiry.isSame(submitted, 'day')
+    );
 });
 
 const { now, timeLeft } = useCountdown();
@@ -126,7 +204,9 @@ const isAllowedTransition = (current, next) => {
     return nextIndex > currentIndex;
 };
 
-const isDone = computed(() => Boolean(props.inquiry.is_done));
+const isDone = computed(() =>
+    ['resolved', 'replaced', 'closed'].includes(currentStatus.value)
+);
 
 const page = usePage();
 const can = computed(() => page.props.can ?? {});
@@ -179,7 +259,8 @@ const can = computed(() => page.props.can ?? {});
                             <Avatar :name="props.inquiry.warranty.user.name" class="h-8 w-8" />
                             <div>
                                 <p class="font-semibold">{{ props.inquiry.warranty.user.name }}</p>
-                                <p class="font-normal text-xs text-neutral-500">{{ props.inquiry.warranty.user.email }}</p>
+                                <p class="font-normal text-xs text-neutral-500">{{ props.inquiry.warranty.user.email }}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -200,10 +281,14 @@ const can = computed(() => page.props.can ?? {});
                         <form @submit.prevent="submitStatus" class="space-y-4 p-5">
                             <div>
                                 <InputLabel value="Current Status" for="status" />
-                                <select v-model="form.status"
-                                    class="w-full border-gray-300 rounded-md text-sm focus:ring-neutral-900 focus:border-neutral-900 transition">
-                                    <option v-for="status in statusFlow" :key="status" :value="status"
-                                        :disabled="isLocked || (!isAllowedTransition(currentStatus, status) && !requiresMessage.includes(status))">
+
+                                <select v-model="form.status" class="w-full border-gray-300 rounded-md text-sm focus:ring-neutral-900 focus:border-neutral-900 transition">
+                                    <option v-for="status in statusFlow" :key="status" :value="status" :disabled="isLocked ||
+                                        (
+                                            !isAllowedTransition(currentStatus, status) &&
+                                            !requiresConfirmation.includes(status)
+                                        )
+                                        ">
                                         {{ status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ') }}
                                     </option>
                                 </select>
@@ -211,33 +296,131 @@ const can = computed(() => page.props.can ?? {});
                                     {{ form.errors.status }}
                                 </div>
                             </div>
-                            <BaseModal :show="showModal" title="Provide Resolution Details"
-                                subtitle="This action requires technician explanation" size="md" @close="closeModal">
+                            <BaseModal :show="showModal" :title="selectedStatus === 'resolved'
+                                ? 'Provide Repair Details'
+                                : selectedStatus === 'replaced'
+                                    ? 'Provide Replacement Details'
+                                    : 'Provide Closure Details'
+                                " :subtitle="selectedStatus === 'closed'
+                                    ? 'This action requires a reason for closing the inquiry'
+                                    : 'This action requires technician service details'
+                                    " size="md" @close="closeModal">
                                 <div class="space-y-4">
+                                    <template v-if="requiresServiceRecord.includes(selectedStatus)">
 
-                                    <textarea v-model="resolutionMessage"
-                                        class="input-border border-gray-300 focus:neutral-900 w-full border rounded-md p-3 text-sm"
-                                        rows="5" placeholder="Explain what was done..."></textarea>
+                                        <div>
+                                            <InputLabel value="Service Type" for="service_type" />
+
+                                            <input id="service_type" :value="selectedStatus === 'resolved'
+                                                ? 'Repair'
+                                                : 'Replacement'
+                                                " type="text" readonly
+                                                class="w-full border-gray-300 rounded-md text-sm bg-gray-50 text-gray-700" />
+
+                                            <p class="text-xs text-neutral-500 mt-1">
+                                                Service type is determined by the selected status.
+                                            </p>
+                                        </div>
+
+                                        <div class="grid grid-cols-2 gap-4">
+
+                                            <div>
+                                                <InputLabel value="Parts Cost" for="parts_cost" />
+
+                                                <input id="parts_cost" v-model="serviceRecordForm.parts_cost" type="number" min="0"
+                                                    step="0.01" placeholder="0.00"
+                                                    class="w-full border-gray-300 rounded-md text-sm focus:ring-neutral-900 focus:border-neutral-900" />
+
+                                                <div v-if="serviceRecordForm.errors.parts_cost" class="text-red-500 text-xs mt-1">
+                                                    {{ serviceRecordForm.errors.parts_cost }}
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <InputLabel value="Labor Cost" for="labor_cost" />
+
+                                                <input id="labor_cost" v-model="serviceRecordForm.labor_cost" type="number" min="0"
+                                                    step="0.01" placeholder="0.00"
+                                                    class="w-full border-gray-300 rounded-md text-sm focus:ring-neutral-900 focus:border-neutral-900" />
+
+                                                <div v-if="serviceRecordForm.errors.labor_cost" class="text-red-500 text-xs mt-1">
+                                                    {{ serviceRecordForm.errors.labor_cost }}
+                                                </div>
+                                            </div>
+
+                                        </div>
+
+                                        <div>
+                                            <InputLabel value="Total Cost" for="total_cost" />
+
+                                            <input id="total_cost" v-model="serviceRecordForm.total_cost" type="number" min="0"
+                                                step="0.01" placeholder="Leave blank to calculate automatically"
+                                                class="w-full border-gray-300 rounded-md text-sm focus:ring-neutral-900 focus:border-neutral-900" />
+
+                                            <p class="text-xs text-neutral-500 mt-1">
+                                                Leave blank to automatically calculate Parts Cost + Labor Cost.
+                                            </p>
+
+                                            <div v-if="serviceRecordForm.errors.total_cost" class="text-red-500 text-xs mt-1">
+                                                {{ serviceRecordForm.errors.total_cost }}
+                                            </div>
+                                        </div>
+
+                                    </template>
+                                    <div>
+                                        <InputLabel :value="selectedStatus === 'closed'
+                                            ? 'Closure Reason'
+                                            : 'Service Notes'
+                                            " for="resolved_message" />
+
+                                        <textarea v-model="form.resolved_message"
+                                            class="input-border border-gray-300 focus:neutral-900 w-full border rounded-md p-3 text-sm"
+                                            rows="5" :placeholder="selectedStatus === 'closed'
+                                                ? 'Explain why this inquiry is being closed...'
+                                                : 'Explain what was done...'
+                                                "></textarea>
+
+                                        <div v-if="form.errors.resolved_message" class="text-red-500 text-xs mt-1">
+                                            {{ form.errors.resolved_message }}
+                                        </div>
+                                    </div>
 
                                     <div class="flex justify-end gap-2">
-                                        <button @click="closeModal" class="px-4 py-2 text-sm rounded hover:bg-gray-100">
+
+                                        <button type="button" @click="closeModal"
+                                            class="px-4 py-2 text-sm rounded hover:bg-gray-100">
                                             Cancel
                                         </button>
 
-                                        <button @click="sendStatusUpdate"
-                                            class="px-4 py-2 bg-neutral-900 text-white rounded text-sm">
-                                            Confirm
+                                        <button type="button" @click="sendStatusUpdate" :disabled="form.processing"
+                                            class="px-4 py-2 bg-neutral-900 text-white rounded text-sm disabled:opacity-50">
+                                            <span v-if="form.processing">
+                                                Saving...
+                                            </span>
+
+                                            <span v-else>
+                                                Confirm
+                                            </span>
                                         </button>
+
                                     </div>
 
                                 </div>
                             </BaseModal>
+
                             <button v-if="can.viewInquiryOnly" type="submit" :disabled="form.processing"
                                 class="w-full bg-neutral-900 text-white py-2.5 rounded-md text-sm font-semibold hover:bg-neutral-800 transition disabled:opacity-50 flex justify-center items-center">
-                                <span v-if="form.processing">Updating...</span>
-                                <span v-else>Apply Status Change</span>
+                                <span v-if="form.processing">
+                                    Updating...
+                                </span>
+
+                                <span v-else>
+                                    Apply Status Change
+                                </span>
                             </button>
+
                         </form>
+
                     </div>
                     <div class="bg-white border border-gray-300 rounded-md space-y-3">
                         <div class="px-5 py-4 border-b border-gray-300">

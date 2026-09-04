@@ -16,6 +16,10 @@ use App\Repositories\Inquiry\InquiryRepository;
 use App\Repositories\Inquiry\InquiryRepositoryInterface;
 use App\Repositories\InquiryResponse\InquiryResponseRepository;
 use App\Repositories\InquiryResponse\InquiryResponseRepositoryInterface;
+use App\Repositories\WarrantyForecast\WarrantyForecastRepository;
+use App\Repositories\WarrantyForecast\WarrantyForecastRepositoryInterface;
+use App\Repositories\WarrantyServiceRecord\WarrantyServiceRecordRepository;
+use App\Repositories\WarrantyServiceRecord\WarrantyServiceRecordRepositoryInterface;
 use Illuminate\Support\ServiceProvider;
 
 class RepositoryServiceProvider extends ServiceProvider
@@ -32,6 +36,8 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(ProductReviewRepositoryInterface::class, ProductReviewRepository::class);
         $this->app->bind(InquiryRepositoryInterface::class, InquiryRepository::class);
         $this->app->bind(InquiryResponseRepositoryInterface::class, InquiryResponseRepository::class);
+        $this->app->bind(WarrantyForecastRepositoryInterface::class, WarrantyForecastRepository::class);
+        $this->app->bind(WarrantyServiceRecordRepositoryInterface::class, WarrantyServiceRecordRepository::class);
     }
 
     /**

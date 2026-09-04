@@ -150,6 +150,16 @@ class ProductRepository implements ProductRepositoryInterface
             ->get();
     }
 
+    public function find(int $id): Product
+    {
+        return Product::findOrFail($id);
+    }
+
+    public function findMany(array $ids): Collection
+    {
+        return Product::with('category:id,name')->whereIn('id', $ids)->get();
+    }
+
     public function create(array $attributes): Product
     {
         return Product::query()->create($attributes);

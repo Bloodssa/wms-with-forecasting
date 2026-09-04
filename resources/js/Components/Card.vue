@@ -16,6 +16,10 @@ defineProps({
     icon: {
         type: [Object, Function],
         required: true
+    },
+    link: {
+        type: Boolean,
+        default: true
     }
 });
 </script>
@@ -31,9 +35,11 @@ defineProps({
             <p class="text-sm font-medium text-neutral-500">{{ title }}</p>
             <div class="flex justify-between items-end mt-2">
                 <h2 class="text-2xl font-bold text-neutral-900">{{ count }}</h2>
-                <Link :href="route"
-                    class="text-xs font-semibold text-neutral-500 hover:underline hover:text-neutral-900">View All
-                </Link>
+                <template v-if="link">
+                    <Link :href="route"
+                        class="text-xs font-semibold text-neutral-500 hover:underline hover:text-neutral-900">View All
+                    </Link>
+                </template>
             </div>
         </div>
     </div>

@@ -8,6 +8,8 @@ use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SocialiteController;
 use App\Http\Controllers\WarrantyController;
+use App\Http\Controllers\WarrantyForecastController;
+use App\Http\Controllers\WarrantyServiceRecordController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -54,7 +56,7 @@ Route::middleware('auth', 'customer')->group(function () {
     Route::patch('/warranty/claim', [WarrantyController::class, 'claimWithSerialNumber'])->name('warranty-claim');
 });
 
-Route::middleware('auth', 'manager')->group(function() {
+Route::middleware('auth', 'manager')->group(function () {
     Route::get('/dashboard', [ManagerController::class, 'index'])->name('dashboard');
     Route::get('/register-warranty', [ManagerController::class, 'register'])->name('register-warranty');
     Route::get('/warranty-inquiries', [ManagerController::class, 'warrantyInquiries'])->name('warranty-inquiries');
@@ -93,9 +95,16 @@ Route::middleware('auth', 'manager')->group(function() {
     // update staffs
     Route::patch('/staff-accounts/{user}/role', [ManagerController::class, 'updateRole'])->name('staff.update-role');
     Route::delete('/staff-accounts/{user}', [ManagerController::class, 'destroyStaff'])->name('staff.destroy');
-    
+
     // Generate PDF Report
     Route::get('/generate-report', [ManagerController::class, 'generateReport'])->name('generate');
+
+    // Warranty Forecast
+    Route::get('/warranty-forecast', [WarrantyForecastController::class, 'index'])->name('manager.warranty-forecast');
+    Route::get('/warranty-forecast/products/{product}', [WarrantyForecastController::class, 'show'])->name('manager.warranty-forecast.show');
+    // Recording an actual repair/service cost against an inquiry
+    Route::post('/warranty-inquiries/{inquiry}/service-record', [WarrantyServiceRecordController::class, 'store'])
+        ->name('inquiry.service-record.store');
 });
 
 
@@ -105,7 +114,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/inquiry/{id}/mark-read', [WarrantyController::class, 'markRead'])->name('inquiry.mark-read');
     Route::post('/notifications/read', [WarrantyController::class, 'markReadNotifications'])->name('notifications.read');
     Route::put('/profile/set-password', [ProfileController::class, 'setPassword'])->name('profile.set-password');
-    
+
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });

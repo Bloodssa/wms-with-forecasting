@@ -4,6 +4,7 @@ import { onMounted, ref, onUnmounted, computed } from 'vue';
 import SidebarLink from './SidebarLink.vue';
 import ApplicationLogo from '../Icons/ApplicationLogo.vue';
 import MarkLogo from '../Icons/MarkLogo.vue';
+import { TrendingUp } from 'lucide-vue-next';
 
 defineProps({
     sideBarOpen: Boolean
@@ -116,7 +117,8 @@ const inquiryPages = [
 
                 <ul class="flex flex-col gap-1 -mt-2">
                     <li>
-                        <SidebarLink :href="route('products')" :active="page.component === 'Manager/Products' || page.component === 'Manager/ShowProduct'">
+                        <SidebarLink :href="route('products')"
+                            :active="page.component === 'Manager/Products' || page.component === 'Manager/ShowProduct'">
                             <svg fill="currentColor" viewBox="0 -960 960 960" class="w-5 h-5 transition-colors" :class="page.component === 'Manager/ShowProduct' || page.component === 'Manager/Products'
                                 ? 'text-neutral-900'
                                 : 'text-neutral-500 group-hover:text-neutral-900'">
@@ -138,6 +140,15 @@ const inquiryPages = [
                         </SidebarLink>
                     </li>
                     <li>
+                        <SidebarLink :href="route('manager.warranty-forecast')"
+                            :active="page.component === 'Manager/WarrantyForecast' || page.component === 'Manager/WarrantyForecastProduct'">
+                            <TrendingUp class="w-5 h-5 transition-colors" :class="page.component === 'Manager/WarrantyForecast' || page.component === 'Manager/WarrantyForecastProduct'
+                                ? 'text-neutral-900'
+                                : 'text-neutral-500 group-hover:text-neutral-900'" />
+                            Warranty Forecast
+                        </SidebarLink>
+                    </li>
+                    <li>
                         <SidebarLink :href="route('reports')" :active="page.component === 'Manager/Reports'">
                             <svg fill="currentColor" viewBox="0 -960 960 960" class="w-5 h-5 transition-colors" :class="page.component === 'Manager/Reports'
                                 ? 'text-neutral-900'
@@ -151,7 +162,8 @@ const inquiryPages = [
                 </ul>
 
                 <hr class="my-3 border-gray-300">
-                <h3 class="mb-4 ml-2 text-md font-semibold text-neutral-900 text-[15px]">{{ can.viewAdminArea ? 'Administration' : 'Settings' }}</h3>
+                <h3 class="mb-4 ml-2 text-md font-semibold text-neutral-900 text-[15px]">{{ can.viewAdminArea ?
+                    'Administration' : 'Settings' }}</h3>
 
                 <ul class="flex flex-col gap-1 -mt-2">
                     <li v-if="can.viewAdminArea">

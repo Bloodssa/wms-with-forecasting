@@ -86,4 +86,6 @@ interface WarrantyRepositoryInterface
     public function unarchive(Warranty $warranty, string $computedStatus): Warranty;
 
     public function create(array $data): Warranty;
+
+    public function find(int $warrantyId): Warranty;
 }

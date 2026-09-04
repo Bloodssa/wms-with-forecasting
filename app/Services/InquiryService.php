@@ -34,7 +34,7 @@ class InquiryService
         $attachmentPaths = $this->storeAttachments($files);
 
         return $this->inquiryRepository->create([
-            'warranty_id' => $data['warranty_id'],
+            'warranty_id' => $warranty->id,
             'message' => $data['message'],
             'status' => InquiryStatusType::OPEN,
             'attachments' => $attachmentPaths,

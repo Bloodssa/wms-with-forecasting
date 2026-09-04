@@ -12,10 +12,14 @@ use App\Models\InquiryResponse;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Warranty;
+use App\Models\WarrantyInquiries;
+use App\Models\WarrantyServiceRecord;
 use App\Repositories\Warranty\WarrantyRepositoryInterface;
 use App\Repositories\Inquiry\InquiryRepositoryInterface;
 use App\Repositories\InquiryResponse\InquiryResponseRepositoryInterface;
 use App\Repositories\User\UserRepositoryInterface;
+use App\Repositories\WarrantyServiceRecord\WarrantyServiceRecordRepositoryInterface;
+use App\Services\Forecasting\ForecastCalculator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -29,6 +33,8 @@ class WarrantyService
         private readonly InquiryRepositoryInterface $inquiryRepository,
         private readonly InquiryResponseRepositoryInterface $inquiryResponseRepository,
         private readonly UserRepositoryInterface $userRepository,
+        private readonly WarrantyServiceRecordRepositoryInterface $serviceRecordRepository,
+        protected ForecastCalculator $calculator
     ) {}
 
     /**
@@ -277,19 +283,19 @@ class WarrantyService
         return $response;
     }
 
-    public function cancelInquiry(int $inquiryId, string $message, int $userId): void 
+    public function cancelInquiry(int $inquiryId, string $message, int $userId): void
     {
         $inquiry = $this->inquiryRepository->findOwnedByUser($inquiryId, $userId);
 
         if (! $inquiry)
             throw new \Exception('Inquiry not found.');
-        
 
-        if ($inquiry->status->isFinal()) 
+
+        if ($inquiry->status->isFinal())
             throw new \Exception('This inquiry can no longer be cancelled.');
-        
 
-        $this->inquiryRepository->updateStatus($inquiry->id,InquiryStatusType::CLOSED);
+
+        $this->inquiryRepository->updateStatus($inquiry->id, InquiryStatusType::CLOSED);
 
         $this->inquiryResponseRepository->create([
             'warranty_inquiries_id' => $inquiry->id,
@@ -297,6 +303,69 @@ class WarrantyService
             'message' => "User cancelled inquiry: {$message}",
             'type' => InquiryResponseType::SOLUTION,
         ]);
+    }
+
+    /**
+     * Create a new inquiry for a warranty, enforcing ownership and expiry rules.
+     */
+    public function submitInquiry(int $warrantyId, int $userId, string $message, array $attachmentPaths): WarrantyInquiries
+    {
+        $warranty = $this->warrantyRepository->find((string) $warrantyId);
+
+        if ($warranty->user_id !== $userId) {
+            throw new WarrantyOperationException('You are not allowed to access this warranty.');
+        }
+
+        if (now()->greaterThan($warranty->expiry_date)) {
+            throw new WarrantyOperationException('This warranty has already expired and cannot accept new inquiries.');
+        }
+
+        return $this->inquiryRepository->create([
+            'warranty_id' => $warranty->id,
+            'message' => $message,
+            'user_id' => $userId,
+            'status' => InquiryStatusType::OPEN,
+            'attachments' => $attachmentPaths,
+            'read_at' => null,
+        ]);
+    }
+
+    /**
+     * record an actual repair/service cost against an inquiry. This is
+     * historical ground-truth data consumed by WarrantyForecastService 
+     *
+     * if total_cost isn't supplied, it's computed from parts + labor
+     * guide requirement: parts + labor = total
+     */
+    public function recordServiceCost(int $inquiryId, ?int $recordedByUserId, array $data): WarrantyServiceRecord
+    {
+        // confirm the inquiry exists (throws ModelNotFoundException via findOrFail otherwise)
+        $inquiry = $this->inquiryRepository->find((string) $inquiryId);
+
+        $partsCost = isset($data['parts_cost']) ? (float) $data['parts_cost'] : null;
+        $laborCost = isset($data['labor_cost']) ? (float) $data['labor_cost'] : null;
+        $totalCost = isset($data['total_cost']) && $data['total_cost'] !== null && $data['total_cost'] !== ''
+            ? (float) $data['total_cost']
+            : $this->calculator->sumCost($partsCost, $laborCost);
+
+        $serviceRecord = $this->serviceRecordRepository->create([
+            'warranty_inquiries_id' => $inquiryId,
+            'recorded_by' => $recordedByUserId,
+            'service_type' => $data['service_type'],
+            'parts_cost' => $partsCost,
+            'labor_cost' => $laborCost,
+            'total_cost' => $totalCost,
+            'notes' => $data['notes'] ?? null,
+        ]);
+
+        // Service record completion ends the inquiry.
+        $this->inquiryRepository->update($inquiry, [
+            'status' => $data['service_type'] === 'repair'
+                ? InquiryStatusType::RESOLVED
+                : InquiryStatusType::REPLACED,
+        ]);
+        
+        return $serviceRecord;
     }
 
     /**

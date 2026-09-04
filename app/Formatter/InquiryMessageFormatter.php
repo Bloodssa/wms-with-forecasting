@@ -18,7 +18,7 @@ class InquiryMessageFormatter
             $messages->push($this->formatMessage(
                 'message',
                 $inquiry->message,
-                $inquiry->user,
+                $inquiry->warranty?->user,
                 $inquiry->created_at,
                 $inquiry->attachments,
                 $inquiry->status

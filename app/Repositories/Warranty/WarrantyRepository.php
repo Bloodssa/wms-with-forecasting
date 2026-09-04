@@ -277,4 +277,9 @@ class WarrantyRepository implements WarrantyRepositoryInterface
     {
         return Warranty::create($data);
     }
+
+    public function find(int $warrantyId): Warranty
+    {
+        return Warranty::query()->find($warrantyId);
+    }
 }

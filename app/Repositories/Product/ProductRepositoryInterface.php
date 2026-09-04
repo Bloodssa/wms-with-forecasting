@@ -36,7 +36,7 @@ interface ProductRepositoryInterface
 
     public function getRelatedProducts(Product $product): Collection;
 
-    public function getGuestProducts(?string $search,?string $category): Collection;
+    public function getGuestProducts(?string $search, ?string $category): Collection;
 
     public function getGuestProductDetails(Product $product): Product;
 
@@ -44,6 +44,10 @@ interface ProductRepositoryInterface
      * get the most reported product and offset it base on the limit
      */
     public function mostReported(int $limit = 5): Collection;
+
+    public function find(int $id): Product;
+
+    public function findMany(array $ids): Collection;
 
     public function create(array $attributes): Product;
 
