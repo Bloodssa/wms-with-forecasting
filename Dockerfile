@@ -1,20 +1,7 @@
 # syntax=docker/dockerfile:1
 
 ##################################################
-# Stage 1: Build frontend assets (Vite/Vue/Tailwind)
-##################################################
-FROM node:20-alpine AS frontend
-
-WORKDIR /app
-
-COPY package.json package-lock.json* ./
-RUN npm ci
-
-COPY . .
-RUN npm run build
-
-##################################################
-# Stage 2: Install PHP dependencies
+# Stage 1: Install PHP dependencies
 ##################################################
 FROM composer:2 AS vendor
 
@@ -36,6 +23,27 @@ COPY . .
 
 RUN composer dump-autoload --optimize --no-dev \
     && composer run-script post-autoload-dump --no-interaction || true
+
+##################################################
+# Stage 2: Build frontend assets (Vite/Vue/Tailwind)
+##################################################
+FROM node:20-alpine AS frontend
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+COPY . .
+
+# resources/js/app.js imports "../../vendor/tightenco/ziggy" directly out of
+# Composer's vendor directory (the standard Breeze/Inertia Ziggy setup,
+# rather than the separate ziggy-js npm package). This stage never runs
+# composer install, so without this, Vite can't resolve that import at all -
+# grab just the one package Ziggy actually needs from the vendor stage.
+COPY --from=vendor /app/vendor/tightenco/ziggy ./vendor/tightenco/ziggy
+
+RUN npm run build
 
 ##################################################
 # Stage 3: Runtime image
