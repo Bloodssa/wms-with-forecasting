@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'customer' => \App\Http\Middleware\Customer::class,
             'manager' => \App\Http\Middleware\Manager::class,
         ]);
+        $middleware->trustProxies(at: '*');
         //
     })
     ->withExceptions(function (Exceptions $exceptions) {
